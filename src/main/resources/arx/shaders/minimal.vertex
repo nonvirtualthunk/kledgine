@@ -1,0 +1,18 @@
+#version 330 core
+
+layout (location = 0) in vec3 Vertex;
+layout (location = 1) in vec4 Color;
+layout (location = 2) in vec2 TexCoord;
+
+
+out vec4 ColorV;
+out vec2 TexCoordV;
+
+uniform mat4 ProjectionMatrix;
+//uniform mat4 ModelViewMatrix;
+
+void main (){
+    gl_Position = ProjectionMatrix * vec4(Vertex, 1.0);
+    ColorV = Color;
+    TexCoordV = TexCoord;
+}

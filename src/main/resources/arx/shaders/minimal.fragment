@@ -1,0 +1,14 @@
+#version 330 core
+
+//#extension GL_EXT_gpu_shader4 : enable
+
+uniform sampler2D tex0;
+
+in vec4 ColorV;
+in vec2 TexCoordV;
+
+out vec4 o_FragColor;
+
+void main (){
+    o_FragColor = texture(tex0, TexCoordV) * ColorV;
+}

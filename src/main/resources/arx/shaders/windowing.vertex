@@ -1,0 +1,25 @@
+#version 330 core
+
+layout (location = 0) in vec3 Vertex;
+layout (location = 1) in vec4 Color;
+layout (location = 2) in vec2 TexCoord;
+layout (location = 3) in vec2 BoundsMin;
+layout (location = 4) in vec2 BoundsMax;
+
+out vec2 VClipCoord;
+out vec2 VBoundsMin;
+out vec2 VBoundsMax;
+out vec2 VTexCoord;
+out vec4 VColor;
+
+uniform mat4 ProjectionMatrix;
+
+void main () {
+   gl_Position = ProjectionMatrix * vec4(Vertex,1.0);
+
+	VColor = Color;
+	VClipCoord = Vertex.xy;
+	VTexCoord = TexCoord;
+	VBoundsMax = BoundsMax;
+	VBoundsMin = BoundsMin;
+}
