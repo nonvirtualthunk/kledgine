@@ -37,7 +37,7 @@ class GlyphRenderer {
         g.color = Color(255, 255, 255, 255)
         g.fill(shape)
         val img = Image.ofSize(shape.bounds.width, shape.bounds.height)
-        val v = Vec4ub()
+        val v = RGBA()
         val rast = buffer.data
         for (y in 0 until shape.bounds.height) {
             for (x in 0 until shape.bounds.width) {

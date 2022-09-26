@@ -1,0 +1,3 @@
+Foos {
+    MiniFoo : []
+}

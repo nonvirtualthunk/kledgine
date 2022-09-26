@@ -1,6 +1,7 @@
 package arx.display.core
 
 import arx.core.*
+import com.typesafe.config.ConfigValue
 import org.lwjgl.stb.STBImage
 import org.lwjgl.stb.STBImageWrite
 import org.lwjgl.system.MemoryStack
@@ -10,6 +11,17 @@ import java.nio.ByteBuffer
 
 interface ImageRef {
     fun toImage() : Image
+
+    companion object : FromConfigCreator<ImageRef> {
+        override fun createFromConfig(cv: ConfigValue?): ImageRef {
+            val str = cv.asStr()
+            return if (str != null) {
+                ImagePath(str)
+            } else {
+                SentinelImage
+            }
+        }
+    }
 }
 
 data class ImagePath(val path: String) : ImageRef {
@@ -19,6 +31,13 @@ data class ImagePath(val path: String) : ImageRef {
             img = Resources.image(path)
         }
         return img!!
+    }
+}
+
+object SentinelImage : ImageRef {
+    val img = Image.ofSize(64,64).withPixels { x, y, v -> if (x == 0 || y == 0 || x == 63 || y == 63) { v(0u,0u,0u,255u) } else { v((x*2).toUByte(), (y * 4).toUByte(), (x*2).toUByte(), 255u) } }
+    override fun toImage(): Image {
+        return img
     }
 }
 
@@ -68,7 +87,7 @@ class Image private constructor() : ImageRef {
         v.a = data.get().toUByte()
     }
 
-    operator fun set(x : Int, y : Int, v: Vec4ub) {
+    operator fun set(x : Int, y : Int, v: RGBA) {
         data.position(offset(x,y))
         data.put(v.r.toByte())
         data.put(v.g.toByte())
@@ -98,9 +117,9 @@ class Image private constructor() : ImageRef {
         }
     }
 
-    fun withPixels(fn: (Int,Int,Vec4ub) -> Unit) : Image {
+    fun withPixels(fn: (Int,Int,RGBA) -> Unit) : Image {
         data.position(0)
-        val v = Vec4ub(0u,0u,0u,0u)
+        val v = RGBA(0u,0u,0u,0u)
         for (y in 0 until height) {
             for (x in 0 until width) {
                 fn(x,y,v)

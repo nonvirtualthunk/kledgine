@@ -1,3 +1,8 @@
+This license applies to all code (specifically, all .kt, .vertex, .fragment files),
+but to no other files within this repository. In the unlikely event that there are
+files not matching those criteria that you are interested in re-using you are
+welcome to contact the repository owner to see if access can be granted.
+
 MIT License
 
 Copyright (c) 2022 Sam Bock

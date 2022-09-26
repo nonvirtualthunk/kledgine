@@ -32,3 +32,70 @@ class LRULoadingCache<K, V>(maximumSize: Int, targetLoadFactor: Float, val loadi
         return getOrPut(k, loadingFunction)
     }
 }
+
+
+
+
+//class Grid2D<T>(defaultValue : T, initialDimensions : Vec2i = Vec2i(128,128)) {
+//    private var origin = Vec2i(0,0)
+//    private var min = Vec2i(0,0)
+//    private var max = Vec2i(0,0)
+//
+//    private var capacity = initialDimensions
+//    val dimensions : Vec2i get() { return dimensionsI }
+//
+//    private var data : Array<Any?> = arrayOfNulls(capacity.x * capacity.y)
+//
+//
+//    private fun expandCapacity(xc: Int, yc: Int) {
+//        val newData : Array<Any?> = arrayOfNulls(xc * yc)
+//        for (x in 0 until capacity.x) {
+//            val oldColumnIndex = x * capacity.y
+//            val newColumnIndex = x * yc
+//            System.arraycopy(data, oldColumnIndex, newData, newColumnIndex, capacity.y)
+//        }
+//    }
+//
+//    operator fun set(x: Int, y: Int, v: T) {
+//        if (x >= dimensions.x || y >= dimensions.y) {
+//            var newXC = capacity.x
+//            var newYC = capacity.y
+//            while (newXC <= x) {
+//                newXC *= 2
+//            }
+//            while (newYC <= y) {
+//                newYC *= 2
+//            }
+//
+//            expandCapacity(newXC, newYC)
+//        }
+//    }
+//
+//}
+
+
+@Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
+class FiniteGrid2D<T>(val dimensions : Vec2i, private val defaultValue : T) {
+    private var data : Array<Any?> = arrayOfNulls(dimensions.x * dimensions.y)
+
+    operator fun set(x: Int, y: Int, v: T) {
+        if (x < 0 || y < 0 || x >= dimensions.x || y >= dimensions.y) {
+            Noto.recordError("Setting value outside of range in FiniteGrid2D")
+        } else {
+            data[x * dimensions.y + y] = v
+        }
+    }
+
+    operator fun get(x: Int, y : Int) : T {
+        return if (x < 0 || y < 0 || x >= dimensions.x || y >= dimensions.y) {
+            defaultValue
+        } else {
+            (data[x * dimensions.y + y] as T?) ?: defaultValue
+        }
+    }
+
+    inline operator fun get(v : Vec2i) : T {
+        return get(v.x, v.y)
+    }
+
+}

@@ -1,9 +1,27 @@
 package arx.engine
 
 
-abstract class EngineComponent
+abstract class EngineComponent {
+    var engine : Engine? = null
+
+    fun fireEvent(event : Event) {
+        engine!!.handleEvent(event)
+    }
+}
+
+
+enum class EventPriority {
+    Last,
+    VeryLow,
+    Low,
+    Normal,
+    High,
+    VeryHigh,
+    First
+}
 
 abstract class DisplayComponent : EngineComponent() {
+    var eventPriority = EventPriority.Normal
 
     open fun initialize(world: World) {}
 
@@ -53,6 +71,12 @@ class Engine(
 ) {
 
     var world = World()
+
+    val components : List<EngineComponent> get() { return gameComponents + displayComponents }
+
+    init {
+        components.forEach { it.engine = this }
+    }
 
     fun initialize() {
         for (gc in gameComponents) {

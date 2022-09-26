@@ -3,15 +3,13 @@ package arx.core
 import arx.core.Axis
 import arx.core.Axis2D
 
-data class Vec2f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat()) {
+open class Vec2f(var elem0: Float = 0.toFloat(), var elem1: Float = 0.toFloat()) {
 
 
-
-    operator fun invoke(arg0 : Float, arg1 : Float) {
+    operator fun invoke(arg0: Float, arg1: Float) {
         elem0 = arg0
         elem1 = arg1
     }
-
 
 
     inline var x: Float
@@ -28,86 +26,84 @@ data class Vec2f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
         }
 
 
-
-    operator fun plus(other : Vec2f) : Vec2f {
-        return Vec2f(elem0 + other.elem0,elem1 + other.elem1)
+    operator fun plus(other: Vec2f): Vec2f {
+        return Vec2f(elem0 + other.elem0, elem1 + other.elem1)
     }
 
-    operator fun plusAssign(other : Vec2f) {
+    operator fun plusAssign(other: Vec2f) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
     }
 
-    operator fun plus(scalar : Float) : Vec2f {
-        return Vec2f(elem0 + scalar,elem1 + scalar)
+    operator fun plus(scalar: Float): Vec2f {
+        return Vec2f(elem0 + scalar, elem1 + scalar)
     }
 
-    operator fun plusAssign(scalar : Float) {
+    operator fun plusAssign(scalar: Float) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
     }
 
 
-    operator fun minus(other : Vec2f) : Vec2f {
-        return Vec2f(elem0 - other.elem0,elem1 - other.elem1)
+    operator fun minus(other: Vec2f): Vec2f {
+        return Vec2f(elem0 - other.elem0, elem1 - other.elem1)
     }
 
-    operator fun minusAssign(other : Vec2f) {
+    operator fun minusAssign(other: Vec2f) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
     }
 
-    operator fun minus(scalar : Float) : Vec2f {
-        return Vec2f(elem0 - scalar,elem1 - scalar)
+    operator fun minus(scalar: Float): Vec2f {
+        return Vec2f(elem0 - scalar, elem1 - scalar)
     }
 
-    operator fun minusAssign(scalar : Float) {
+    operator fun minusAssign(scalar: Float) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
     }
 
 
-    operator fun times(other : Vec2f) : Vec2f {
-        return Vec2f(elem0 * other.elem0,elem1 * other.elem1)
+    operator fun times(other: Vec2f): Vec2f {
+        return Vec2f(elem0 * other.elem0, elem1 * other.elem1)
     }
 
-    operator fun timesAssign(other : Vec2f) {
+    operator fun timesAssign(other: Vec2f) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
     }
 
-    operator fun times(scalar : Float) : Vec2f {
-        return Vec2f(elem0 * scalar,elem1 * scalar)
+    operator fun times(scalar: Float): Vec2f {
+        return Vec2f(elem0 * scalar, elem1 * scalar)
     }
 
-    operator fun timesAssign(scalar : Float) {
+    operator fun timesAssign(scalar: Float) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
     }
 
 
-    operator fun div(other : Vec2f) : Vec2f {
-        return Vec2f(elem0 / other.elem0,elem1 / other.elem1)
+    operator fun div(other: Vec2f): Vec2f {
+        return Vec2f(elem0 / other.elem0, elem1 / other.elem1)
     }
 
-    operator fun divAssign(other : Vec2f) {
+    operator fun divAssign(other: Vec2f) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
     }
 
-    operator fun div(scalar : Float) : Vec2f {
-        return Vec2f(elem0 / scalar,elem1 / scalar)
+    operator fun div(scalar: Float): Vec2f {
+        return Vec2f(elem0 / scalar, elem1 / scalar)
     }
 
-    operator fun divAssign(scalar : Float) {
+    operator fun divAssign(scalar: Float) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
     }
 
 
-
-    operator fun get(i: Int) : Float {
-        return when(i) {
+    operator fun get(i: Int): Float {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             else -> error("Attempted to retrieve invalid element from 2 dimension vector")
@@ -115,18 +111,18 @@ data class Vec2f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
     operator fun set(i: Int, t: Float) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             else -> error("Attempted to set invalid element from 2 dimension vector")
         }
     }
 
-    operator fun get(axis: Axis) : Float {
+    operator fun get(axis: Axis): Float {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Float {
+    operator fun get(axis: Axis2D): Float {
         return get(axis.ordinal)
     }
 
@@ -134,16 +130,16 @@ data class Vec2f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Float) {
+    operator fun get(axis: Axis2D, t: Float) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec2f) : Float = elem0 * other.elem0 + elem1 * other.elem1
+    fun dot(other: Vec2f): Float = elem0 * other.elem0 + elem1 * other.elem1
 
-    fun magnitude2() : Float = elem0 * elem0 + elem1 * elem1
+    fun magnitude2(): Float = elem0 * elem0 + elem1 * elem1
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
 
 
     fun normalize() {
@@ -154,31 +150,44 @@ data class Vec2f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
 
     fun normalizeSafe() {
         val mag2 = magnitude2()
-        if (mag2 == 0.0f) { return }
+        if (mag2 == 0.0f) {
+            return
+        }
         val mag = kotlin.math.sqrt(mag2)
         elem0 = elem0 / mag
         elem1 = elem1 / mag
     }
 
 
+    override fun toString(): String {
+        return "Vec2f($elem0,$elem1)"
+    }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
+        other as Vec2f
 
+        return elem0 == other.elem0 && elem1 == other.elem1
+    }
 
-    override fun toString(): String { return "Vec2f($elem0,$elem1)" }
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        return result
+    }
 }
 
 
-data class Vec3f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(), var elem2 : Float = 0.toFloat()) {
+open class Vec3f(var elem0: Float = 0.toFloat(), var elem1: Float = 0.toFloat(), var elem2: Float = 0.toFloat()) {
 
 
-
-    operator fun invoke(arg0 : Float, arg1 : Float, arg2 : Float) {
+    operator fun invoke(arg0: Float, arg1: Float, arg2: Float) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
     }
-
 
 
     inline var x: Float
@@ -223,94 +232,92 @@ data class Vec3f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
         }
 
 
-
-    operator fun plus(other : Vec3f) : Vec3f {
-        return Vec3f(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2)
+    operator fun plus(other: Vec3f): Vec3f {
+        return Vec3f(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2)
     }
 
-    operator fun plusAssign(other : Vec3f) {
+    operator fun plusAssign(other: Vec3f) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
         elem2 = (elem2 + other.elem2)
     }
 
-    operator fun plus(scalar : Float) : Vec3f {
-        return Vec3f(elem0 + scalar,elem1 + scalar,elem2 + scalar)
+    operator fun plus(scalar: Float): Vec3f {
+        return Vec3f(elem0 + scalar, elem1 + scalar, elem2 + scalar)
     }
 
-    operator fun plusAssign(scalar : Float) {
+    operator fun plusAssign(scalar: Float) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
         elem2 = (elem2 + scalar)
     }
 
 
-    operator fun minus(other : Vec3f) : Vec3f {
-        return Vec3f(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2)
+    operator fun minus(other: Vec3f): Vec3f {
+        return Vec3f(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2)
     }
 
-    operator fun minusAssign(other : Vec3f) {
+    operator fun minusAssign(other: Vec3f) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
         elem2 = (elem2 - other.elem2)
     }
 
-    operator fun minus(scalar : Float) : Vec3f {
-        return Vec3f(elem0 - scalar,elem1 - scalar,elem2 - scalar)
+    operator fun minus(scalar: Float): Vec3f {
+        return Vec3f(elem0 - scalar, elem1 - scalar, elem2 - scalar)
     }
 
-    operator fun minusAssign(scalar : Float) {
+    operator fun minusAssign(scalar: Float) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
         elem2 = (elem2 - scalar)
     }
 
 
-    operator fun times(other : Vec3f) : Vec3f {
-        return Vec3f(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2)
+    operator fun times(other: Vec3f): Vec3f {
+        return Vec3f(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2)
     }
 
-    operator fun timesAssign(other : Vec3f) {
+    operator fun timesAssign(other: Vec3f) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
         elem2 = (elem2 * other.elem2)
     }
 
-    operator fun times(scalar : Float) : Vec3f {
-        return Vec3f(elem0 * scalar,elem1 * scalar,elem2 * scalar)
+    operator fun times(scalar: Float): Vec3f {
+        return Vec3f(elem0 * scalar, elem1 * scalar, elem2 * scalar)
     }
 
-    operator fun timesAssign(scalar : Float) {
+    operator fun timesAssign(scalar: Float) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
         elem2 = (elem2 * scalar)
     }
 
 
-    operator fun div(other : Vec3f) : Vec3f {
-        return Vec3f(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2)
+    operator fun div(other: Vec3f): Vec3f {
+        return Vec3f(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2)
     }
 
-    operator fun divAssign(other : Vec3f) {
+    operator fun divAssign(other: Vec3f) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
         elem2 = (elem2 / other.elem2)
     }
 
-    operator fun div(scalar : Float) : Vec3f {
-        return Vec3f(elem0 / scalar,elem1 / scalar,elem2 / scalar)
+    operator fun div(scalar: Float): Vec3f {
+        return Vec3f(elem0 / scalar, elem1 / scalar, elem2 / scalar)
     }
 
-    operator fun divAssign(scalar : Float) {
+    operator fun divAssign(scalar: Float) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
         elem2 = (elem2 / scalar)
     }
 
 
-
-    operator fun get(i: Int) : Float {
-        return when(i) {
+    operator fun get(i: Int): Float {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -319,7 +326,7 @@ data class Vec3f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
     operator fun set(i: Int, t: Float) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -327,11 +334,11 @@ data class Vec3f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
         }
     }
 
-    operator fun get(axis: Axis) : Float {
+    operator fun get(axis: Axis): Float {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Float {
+    operator fun get(axis: Axis2D): Float {
         return get(axis.ordinal)
     }
 
@@ -339,16 +346,16 @@ data class Vec3f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Float) {
+    operator fun get(axis: Axis2D, t: Float) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec3f) : Float = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
+    fun dot(other: Vec3f): Float = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
 
-    fun magnitude2() : Float = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
+    fun magnitude2(): Float = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
 
 
     fun normalize() {
@@ -360,7 +367,9 @@ data class Vec3f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
 
     fun normalizeSafe() {
         val mag2 = magnitude2()
-        if (mag2 == 0.0f) { return }
+        if (mag2 == 0.0f) {
+            return
+        }
         val mag = kotlin.math.sqrt(mag2)
         elem0 = elem0 / mag
         elem1 = elem1 / mag
@@ -368,25 +377,40 @@ data class Vec3f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
 
-    fun cross(other : Vec3f) : Vec3f = Vec3f(elem1*other.elem2-other.elem1*elem2,elem2*other.elem0-other.elem2*elem0,elem0*other.elem1-other.elem0*elem1)
+    fun cross(other: Vec3f): Vec3f = Vec3f(elem1 * other.elem2 - other.elem1 * elem2, elem2 * other.elem0 - other.elem2 * elem0, elem0 * other.elem1 - other.elem0 * elem1)
 
 
+    override fun toString(): String {
+        return "Vec3f($elem0,$elem1,$elem2)"
+    }
 
-    override fun toString(): String { return "Vec3f($elem0,$elem1,$elem2)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec3f
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        return result
+    }
 }
 
 
-data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(), var elem2 : Float = 0.toFloat(), var elem3 : Float = 0.toFloat()) {
+class Vec4f(var elem0: Float = 0.toFloat(), var elem1: Float = 0.toFloat(), var elem2: Float = 0.toFloat(), var elem3: Float = 0.toFloat()) {
 
 
-
-    operator fun invoke(arg0 : Float, arg1 : Float, arg2 : Float, arg3 : Float) {
+    operator fun invoke(arg0: Float, arg1: Float, arg2: Float, arg3: Float) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
         elem3 = arg3
     }
-
 
 
     inline var x: Float
@@ -445,23 +469,22 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
         }
 
 
-
-    operator fun plus(other : Vec4f) : Vec4f {
-        return Vec4f(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2,elem3 + other.elem3)
+    operator fun plus(other: Vec4f): Vec4f {
+        return Vec4f(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2, elem3 + other.elem3)
     }
 
-    operator fun plusAssign(other : Vec4f) {
+    operator fun plusAssign(other: Vec4f) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
         elem2 = (elem2 + other.elem2)
         elem3 = (elem3 + other.elem3)
     }
 
-    operator fun plus(scalar : Float) : Vec4f {
-        return Vec4f(elem0 + scalar,elem1 + scalar,elem2 + scalar,elem3 + scalar)
+    operator fun plus(scalar: Float): Vec4f {
+        return Vec4f(elem0 + scalar, elem1 + scalar, elem2 + scalar, elem3 + scalar)
     }
 
-    operator fun plusAssign(scalar : Float) {
+    operator fun plusAssign(scalar: Float) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
         elem2 = (elem2 + scalar)
@@ -469,22 +492,22 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
 
-    operator fun minus(other : Vec4f) : Vec4f {
-        return Vec4f(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2,elem3 - other.elem3)
+    operator fun minus(other: Vec4f): Vec4f {
+        return Vec4f(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2, elem3 - other.elem3)
     }
 
-    operator fun minusAssign(other : Vec4f) {
+    operator fun minusAssign(other: Vec4f) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
         elem2 = (elem2 - other.elem2)
         elem3 = (elem3 - other.elem3)
     }
 
-    operator fun minus(scalar : Float) : Vec4f {
-        return Vec4f(elem0 - scalar,elem1 - scalar,elem2 - scalar,elem3 - scalar)
+    operator fun minus(scalar: Float): Vec4f {
+        return Vec4f(elem0 - scalar, elem1 - scalar, elem2 - scalar, elem3 - scalar)
     }
 
-    operator fun minusAssign(scalar : Float) {
+    operator fun minusAssign(scalar: Float) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
         elem2 = (elem2 - scalar)
@@ -492,22 +515,22 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
 
-    operator fun times(other : Vec4f) : Vec4f {
-        return Vec4f(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2,elem3 * other.elem3)
+    operator fun times(other: Vec4f): Vec4f {
+        return Vec4f(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2, elem3 * other.elem3)
     }
 
-    operator fun timesAssign(other : Vec4f) {
+    operator fun timesAssign(other: Vec4f) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
         elem2 = (elem2 * other.elem2)
         elem3 = (elem3 * other.elem3)
     }
 
-    operator fun times(scalar : Float) : Vec4f {
-        return Vec4f(elem0 * scalar,elem1 * scalar,elem2 * scalar,elem3 * scalar)
+    operator fun times(scalar: Float): Vec4f {
+        return Vec4f(elem0 * scalar, elem1 * scalar, elem2 * scalar, elem3 * scalar)
     }
 
-    operator fun timesAssign(scalar : Float) {
+    operator fun timesAssign(scalar: Float) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
         elem2 = (elem2 * scalar)
@@ -515,22 +538,22 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
 
-    operator fun div(other : Vec4f) : Vec4f {
-        return Vec4f(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2,elem3 / other.elem3)
+    operator fun div(other: Vec4f): Vec4f {
+        return Vec4f(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2, elem3 / other.elem3)
     }
 
-    operator fun divAssign(other : Vec4f) {
+    operator fun divAssign(other: Vec4f) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
         elem2 = (elem2 / other.elem2)
         elem3 = (elem3 / other.elem3)
     }
 
-    operator fun div(scalar : Float) : Vec4f {
-        return Vec4f(elem0 / scalar,elem1 / scalar,elem2 / scalar,elem3 / scalar)
+    operator fun div(scalar: Float): Vec4f {
+        return Vec4f(elem0 / scalar, elem1 / scalar, elem2 / scalar, elem3 / scalar)
     }
 
-    operator fun divAssign(scalar : Float) {
+    operator fun divAssign(scalar: Float) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
         elem2 = (elem2 / scalar)
@@ -538,9 +561,8 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
 
-
-    operator fun get(i: Int) : Float {
-        return when(i) {
+    operator fun get(i: Int): Float {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -550,7 +572,7 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
     operator fun set(i: Int, t: Float) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -559,11 +581,11 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
         }
     }
 
-    operator fun get(axis: Axis) : Float {
+    operator fun get(axis: Axis): Float {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Float {
+    operator fun get(axis: Axis2D): Float {
         return get(axis.ordinal)
     }
 
@@ -571,16 +593,16 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Float) {
+    operator fun get(axis: Axis2D, t: Float) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec4f) : Float = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
+    fun dot(other: Vec4f): Float = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
 
-    fun magnitude2() : Float = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
+    fun magnitude2(): Float = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
 
 
     fun normalize() {
@@ -593,7 +615,9 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
 
     fun normalizeSafe() {
         val mag2 = magnitude2()
-        if (mag2 == 0.0f) { return }
+        if (mag2 == 0.0f) {
+            return
+        }
         val mag = kotlin.math.sqrt(mag2)
         elem0 = elem0 / mag
         elem1 = elem1 / mag
@@ -602,23 +626,36 @@ data class Vec4f(var elem0 : Float = 0.toFloat(), var elem1 : Float = 0.toFloat(
     }
 
 
+    override fun toString(): String {
+        return "Vec4f($elem0,$elem1,$elem2,$elem3)"
+    }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
+        other as Vec4f
 
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2 && elem3 == other.elem3
+    }
 
-    override fun toString(): String { return "Vec4f($elem0,$elem1,$elem2,$elem3)" }
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        result = result * 31 + elem3.hashCode()
+        return result
+    }
 }
 
 
-data class Vec2i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt()) {
+open class Vec2i(var elem0: Int = 0.toInt(), var elem1: Int = 0.toInt()) {
 
 
-
-    operator fun invoke(arg0 : Int, arg1 : Int) {
+    operator fun invoke(arg0: Int, arg1: Int) {
         elem0 = arg0
         elem1 = arg1
     }
-
 
 
     inline var x: Int
@@ -635,86 +672,84 @@ data class Vec2i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt()) {
         }
 
 
-
-    operator fun plus(other : Vec2i) : Vec2i {
-        return Vec2i(elem0 + other.elem0,elem1 + other.elem1)
+    operator fun plus(other: Vec2i): Vec2i {
+        return Vec2i(elem0 + other.elem0, elem1 + other.elem1)
     }
 
-    operator fun plusAssign(other : Vec2i) {
+    operator fun plusAssign(other: Vec2i) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
     }
 
-    operator fun plus(scalar : Int) : Vec2i {
-        return Vec2i(elem0 + scalar,elem1 + scalar)
+    operator fun plus(scalar: Int): Vec2i {
+        return Vec2i(elem0 + scalar, elem1 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
     }
 
 
-    operator fun minus(other : Vec2i) : Vec2i {
-        return Vec2i(elem0 - other.elem0,elem1 - other.elem1)
+    operator fun minus(other: Vec2i): Vec2i {
+        return Vec2i(elem0 - other.elem0, elem1 - other.elem1)
     }
 
-    operator fun minusAssign(other : Vec2i) {
+    operator fun minusAssign(other: Vec2i) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
     }
 
-    operator fun minus(scalar : Int) : Vec2i {
-        return Vec2i(elem0 - scalar,elem1 - scalar)
+    operator fun minus(scalar: Int): Vec2i {
+        return Vec2i(elem0 - scalar, elem1 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
     }
 
 
-    operator fun times(other : Vec2i) : Vec2i {
-        return Vec2i(elem0 * other.elem0,elem1 * other.elem1)
+    operator fun times(other: Vec2i): Vec2i {
+        return Vec2i(elem0 * other.elem0, elem1 * other.elem1)
     }
 
-    operator fun timesAssign(other : Vec2i) {
+    operator fun timesAssign(other: Vec2i) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
     }
 
-    operator fun times(scalar : Int) : Vec2i {
-        return Vec2i(elem0 * scalar,elem1 * scalar)
+    operator fun times(scalar: Int): Vec2i {
+        return Vec2i(elem0 * scalar, elem1 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
     }
 
 
-    operator fun div(other : Vec2i) : Vec2i {
-        return Vec2i(elem0 / other.elem0,elem1 / other.elem1)
+    operator fun div(other: Vec2i): Vec2i {
+        return Vec2i(elem0 / other.elem0, elem1 / other.elem1)
     }
 
-    operator fun divAssign(other : Vec2i) {
+    operator fun divAssign(other: Vec2i) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
     }
 
-    operator fun div(scalar : Int) : Vec2i {
-        return Vec2i(elem0 / scalar,elem1 / scalar)
+    operator fun div(scalar: Int): Vec2i {
+        return Vec2i(elem0 / scalar, elem1 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
     }
 
 
-
-    operator fun get(i: Int) : Int {
-        return when(i) {
+    operator fun get(i: Int): Int {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             else -> error("Attempted to retrieve invalid element from 2 dimension vector")
@@ -722,18 +757,18 @@ data class Vec2i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt()) {
     }
 
     operator fun set(i: Int, t: Int) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             else -> error("Attempted to set invalid element from 2 dimension vector")
         }
     }
 
-    operator fun get(axis: Axis) : Int {
+    operator fun get(axis: Axis): Int {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Int {
+    operator fun get(axis: Axis2D): Int {
         return get(axis.ordinal)
     }
 
@@ -741,37 +776,51 @@ data class Vec2i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt()) {
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Int) {
+    operator fun get(axis: Axis2D, t: Int) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec2i) : Int = elem0 * other.elem0 + elem1 * other.elem1
+    fun dot(other: Vec2i): Int = elem0 * other.elem0 + elem1 * other.elem1
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
 
 
+    fun toFloat(): Vec2f {
+        return Vec2f(elem0.toFloat(), elem1.toFloat())
+    }
 
-    fun toFloat() : Vec2f { return Vec2f(elem0.toFloat(), elem1.toFloat()) }
+    override fun toString(): String {
+        return "Vec2i($elem0,$elem1)"
+    }
 
-    override fun toString(): String { return "Vec2i($elem0,$elem1)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec2i
+
+        return elem0 == other.elem0 && elem1 == other.elem1
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        return result
+    }
 }
 
 
-data class Vec3i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var elem2 : Int = 0.toInt()) {
+open class Vec3i(var elem0: Int = 0.toInt(), var elem1: Int = 0.toInt(), var elem2: Int = 0.toInt()) {
 
 
-
-    operator fun invoke(arg0 : Int, arg1 : Int, arg2 : Int) {
+    operator fun invoke(arg0: Int, arg1: Int, arg2: Int) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
     }
-
 
 
     inline var x: Int
@@ -816,94 +865,92 @@ data class Vec3i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
         }
 
 
-
-    operator fun plus(other : Vec3i) : Vec3i {
-        return Vec3i(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2)
+    operator fun plus(other: Vec3i): Vec3i {
+        return Vec3i(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2)
     }
 
-    operator fun plusAssign(other : Vec3i) {
+    operator fun plusAssign(other: Vec3i) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
         elem2 = (elem2 + other.elem2)
     }
 
-    operator fun plus(scalar : Int) : Vec3i {
-        return Vec3i(elem0 + scalar,elem1 + scalar,elem2 + scalar)
+    operator fun plus(scalar: Int): Vec3i {
+        return Vec3i(elem0 + scalar, elem1 + scalar, elem2 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
         elem2 = (elem2 + scalar)
     }
 
 
-    operator fun minus(other : Vec3i) : Vec3i {
-        return Vec3i(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2)
+    operator fun minus(other: Vec3i): Vec3i {
+        return Vec3i(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2)
     }
 
-    operator fun minusAssign(other : Vec3i) {
+    operator fun minusAssign(other: Vec3i) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
         elem2 = (elem2 - other.elem2)
     }
 
-    operator fun minus(scalar : Int) : Vec3i {
-        return Vec3i(elem0 - scalar,elem1 - scalar,elem2 - scalar)
+    operator fun minus(scalar: Int): Vec3i {
+        return Vec3i(elem0 - scalar, elem1 - scalar, elem2 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
         elem2 = (elem2 - scalar)
     }
 
 
-    operator fun times(other : Vec3i) : Vec3i {
-        return Vec3i(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2)
+    operator fun times(other: Vec3i): Vec3i {
+        return Vec3i(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2)
     }
 
-    operator fun timesAssign(other : Vec3i) {
+    operator fun timesAssign(other: Vec3i) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
         elem2 = (elem2 * other.elem2)
     }
 
-    operator fun times(scalar : Int) : Vec3i {
-        return Vec3i(elem0 * scalar,elem1 * scalar,elem2 * scalar)
+    operator fun times(scalar: Int): Vec3i {
+        return Vec3i(elem0 * scalar, elem1 * scalar, elem2 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
         elem2 = (elem2 * scalar)
     }
 
 
-    operator fun div(other : Vec3i) : Vec3i {
-        return Vec3i(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2)
+    operator fun div(other: Vec3i): Vec3i {
+        return Vec3i(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2)
     }
 
-    operator fun divAssign(other : Vec3i) {
+    operator fun divAssign(other: Vec3i) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
         elem2 = (elem2 / other.elem2)
     }
 
-    operator fun div(scalar : Int) : Vec3i {
-        return Vec3i(elem0 / scalar,elem1 / scalar,elem2 / scalar)
+    operator fun div(scalar: Int): Vec3i {
+        return Vec3i(elem0 / scalar, elem1 / scalar, elem2 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
         elem2 = (elem2 / scalar)
     }
 
 
-
-    operator fun get(i: Int) : Int {
-        return when(i) {
+    operator fun get(i: Int): Int {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -912,7 +959,7 @@ data class Vec3i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
     }
 
     operator fun set(i: Int, t: Int) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -920,11 +967,11 @@ data class Vec3i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
         }
     }
 
-    operator fun get(axis: Axis) : Int {
+    operator fun get(axis: Axis): Int {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Int {
+    operator fun get(axis: Axis2D): Int {
         return get(axis.ordinal)
     }
 
@@ -932,38 +979,55 @@ data class Vec3i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Int) {
+    operator fun get(axis: Axis2D, t: Int) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec3i) : Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
+    fun dot(other: Vec3i): Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
 
 
+    fun cross(other: Vec3i): Vec3i = Vec3i(elem1 * other.elem2 - other.elem1 * elem2, elem2 * other.elem0 - other.elem2 * elem0, elem0 * other.elem1 - other.elem0 * elem1)
 
-    fun cross(other : Vec3i) : Vec3i = Vec3i(elem1*other.elem2-other.elem1*elem2,elem2*other.elem0-other.elem2*elem0,elem0*other.elem1-other.elem0*elem1)
+    fun toFloat(): Vec3f {
+        return Vec3f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat())
+    }
 
-    fun toFloat() : Vec3f { return Vec3f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat()) }
+    override fun toString(): String {
+        return "Vec3i($elem0,$elem1,$elem2)"
+    }
 
-    override fun toString(): String { return "Vec3i($elem0,$elem1,$elem2)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec3i
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        return result
+    }
 }
 
 
-data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var elem2 : Int = 0.toInt(), var elem3 : Int = 0.toInt()) {
+class Vec4i(var elem0: Int = 0.toInt(), var elem1: Int = 0.toInt(), var elem2: Int = 0.toInt(), var elem3: Int = 0.toInt()) {
 
 
-
-    operator fun invoke(arg0 : Int, arg1 : Int, arg2 : Int, arg3 : Int) {
+    operator fun invoke(arg0: Int, arg1: Int, arg2: Int, arg3: Int) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
         elem3 = arg3
     }
-
 
 
     inline var x: Int
@@ -1022,23 +1086,22 @@ data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
         }
 
 
-
-    operator fun plus(other : Vec4i) : Vec4i {
-        return Vec4i(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2,elem3 + other.elem3)
+    operator fun plus(other: Vec4i): Vec4i {
+        return Vec4i(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2, elem3 + other.elem3)
     }
 
-    operator fun plusAssign(other : Vec4i) {
+    operator fun plusAssign(other: Vec4i) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
         elem2 = (elem2 + other.elem2)
         elem3 = (elem3 + other.elem3)
     }
 
-    operator fun plus(scalar : Int) : Vec4i {
-        return Vec4i(elem0 + scalar,elem1 + scalar,elem2 + scalar,elem3 + scalar)
+    operator fun plus(scalar: Int): Vec4i {
+        return Vec4i(elem0 + scalar, elem1 + scalar, elem2 + scalar, elem3 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
         elem2 = (elem2 + scalar)
@@ -1046,22 +1109,22 @@ data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
     }
 
 
-    operator fun minus(other : Vec4i) : Vec4i {
-        return Vec4i(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2,elem3 - other.elem3)
+    operator fun minus(other: Vec4i): Vec4i {
+        return Vec4i(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2, elem3 - other.elem3)
     }
 
-    operator fun minusAssign(other : Vec4i) {
+    operator fun minusAssign(other: Vec4i) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
         elem2 = (elem2 - other.elem2)
         elem3 = (elem3 - other.elem3)
     }
 
-    operator fun minus(scalar : Int) : Vec4i {
-        return Vec4i(elem0 - scalar,elem1 - scalar,elem2 - scalar,elem3 - scalar)
+    operator fun minus(scalar: Int): Vec4i {
+        return Vec4i(elem0 - scalar, elem1 - scalar, elem2 - scalar, elem3 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
         elem2 = (elem2 - scalar)
@@ -1069,22 +1132,22 @@ data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
     }
 
 
-    operator fun times(other : Vec4i) : Vec4i {
-        return Vec4i(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2,elem3 * other.elem3)
+    operator fun times(other: Vec4i): Vec4i {
+        return Vec4i(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2, elem3 * other.elem3)
     }
 
-    operator fun timesAssign(other : Vec4i) {
+    operator fun timesAssign(other: Vec4i) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
         elem2 = (elem2 * other.elem2)
         elem3 = (elem3 * other.elem3)
     }
 
-    operator fun times(scalar : Int) : Vec4i {
-        return Vec4i(elem0 * scalar,elem1 * scalar,elem2 * scalar,elem3 * scalar)
+    operator fun times(scalar: Int): Vec4i {
+        return Vec4i(elem0 * scalar, elem1 * scalar, elem2 * scalar, elem3 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
         elem2 = (elem2 * scalar)
@@ -1092,22 +1155,22 @@ data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
     }
 
 
-    operator fun div(other : Vec4i) : Vec4i {
-        return Vec4i(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2,elem3 / other.elem3)
+    operator fun div(other: Vec4i): Vec4i {
+        return Vec4i(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2, elem3 / other.elem3)
     }
 
-    operator fun divAssign(other : Vec4i) {
+    operator fun divAssign(other: Vec4i) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
         elem2 = (elem2 / other.elem2)
         elem3 = (elem3 / other.elem3)
     }
 
-    operator fun div(scalar : Int) : Vec4i {
-        return Vec4i(elem0 / scalar,elem1 / scalar,elem2 / scalar,elem3 / scalar)
+    operator fun div(scalar: Int): Vec4i {
+        return Vec4i(elem0 / scalar, elem1 / scalar, elem2 / scalar, elem3 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
         elem2 = (elem2 / scalar)
@@ -1115,9 +1178,8 @@ data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
     }
 
 
-
-    operator fun get(i: Int) : Int {
-        return when(i) {
+    operator fun get(i: Int): Int {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -1127,7 +1189,7 @@ data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
     }
 
     operator fun set(i: Int, t: Int) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -1136,11 +1198,11 @@ data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
         }
     }
 
-    operator fun get(axis: Axis) : Int {
+    operator fun get(axis: Axis): Int {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Int {
+    operator fun get(axis: Axis2D): Int {
         return get(axis.ordinal)
     }
 
@@ -1148,36 +1210,53 @@ data class Vec4i(var elem0 : Int = 0.toInt(), var elem1 : Int = 0.toInt(), var e
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Int) {
+    operator fun get(axis: Axis2D, t: Int) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec4i) : Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
+    fun dot(other: Vec4i): Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
 
 
+    fun toFloat(): Vec4f {
+        return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat())
+    }
 
-    fun toFloat() : Vec4f { return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat()) }
+    override fun toString(): String {
+        return "Vec4i($elem0,$elem1,$elem2,$elem3)"
+    }
 
-    override fun toString(): String { return "Vec4i($elem0,$elem1,$elem2,$elem3)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec4i
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2 && elem3 == other.elem3
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        result = result * 31 + elem3.hashCode()
+        return result
+    }
 }
 
 
-data class Vec2s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort()) {
-    constructor(arg0 : Int, arg1 : Int) : this(arg0.toShort(), arg1.toShort()) {}
+class Vec2s(var elem0: Short = 0.toShort(), var elem1: Short = 0.toShort()) {
+    constructor(arg0: Int, arg1: Int) : this(arg0.toShort(), arg1.toShort()) {}
 
 
-    operator fun invoke(arg0 : Short, arg1 : Short) {
+    operator fun invoke(arg0: Short, arg1: Short) {
         elem0 = arg0
         elem1 = arg1
     }
-
 
 
     inline var x: Short
@@ -1194,86 +1273,84 @@ data class Vec2s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
         }
 
 
-
-    operator fun plus(other : Vec2s) : Vec2s {
-        return Vec2s(elem0 + other.elem0,elem1 + other.elem1)
+    operator fun plus(other: Vec2s): Vec2s {
+        return Vec2s(elem0 + other.elem0, elem1 + other.elem1)
     }
 
-    operator fun plusAssign(other : Vec2s) {
+    operator fun plusAssign(other: Vec2s) {
         elem0 = (elem0 + other.elem0).toShort()
         elem1 = (elem1 + other.elem1).toShort()
     }
 
-    operator fun plus(scalar : Int) : Vec2s {
-        return Vec2s(elem0 + scalar,elem1 + scalar)
+    operator fun plus(scalar: Int): Vec2s {
+        return Vec2s(elem0 + scalar, elem1 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar).toShort()
         elem1 = (elem1 + scalar).toShort()
     }
 
 
-    operator fun minus(other : Vec2s) : Vec2s {
-        return Vec2s(elem0 - other.elem0,elem1 - other.elem1)
+    operator fun minus(other: Vec2s): Vec2s {
+        return Vec2s(elem0 - other.elem0, elem1 - other.elem1)
     }
 
-    operator fun minusAssign(other : Vec2s) {
+    operator fun minusAssign(other: Vec2s) {
         elem0 = (elem0 - other.elem0).toShort()
         elem1 = (elem1 - other.elem1).toShort()
     }
 
-    operator fun minus(scalar : Int) : Vec2s {
-        return Vec2s(elem0 - scalar,elem1 - scalar)
+    operator fun minus(scalar: Int): Vec2s {
+        return Vec2s(elem0 - scalar, elem1 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar).toShort()
         elem1 = (elem1 - scalar).toShort()
     }
 
 
-    operator fun times(other : Vec2s) : Vec2s {
-        return Vec2s(elem0 * other.elem0,elem1 * other.elem1)
+    operator fun times(other: Vec2s): Vec2s {
+        return Vec2s(elem0 * other.elem0, elem1 * other.elem1)
     }
 
-    operator fun timesAssign(other : Vec2s) {
+    operator fun timesAssign(other: Vec2s) {
         elem0 = (elem0 * other.elem0).toShort()
         elem1 = (elem1 * other.elem1).toShort()
     }
 
-    operator fun times(scalar : Int) : Vec2s {
-        return Vec2s(elem0 * scalar,elem1 * scalar)
+    operator fun times(scalar: Int): Vec2s {
+        return Vec2s(elem0 * scalar, elem1 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar).toShort()
         elem1 = (elem1 * scalar).toShort()
     }
 
 
-    operator fun div(other : Vec2s) : Vec2s {
-        return Vec2s(elem0 / other.elem0,elem1 / other.elem1)
+    operator fun div(other: Vec2s): Vec2s {
+        return Vec2s(elem0 / other.elem0, elem1 / other.elem1)
     }
 
-    operator fun divAssign(other : Vec2s) {
+    operator fun divAssign(other: Vec2s) {
         elem0 = (elem0 / other.elem0).toShort()
         elem1 = (elem1 / other.elem1).toShort()
     }
 
-    operator fun div(scalar : Int) : Vec2s {
-        return Vec2s(elem0 / scalar,elem1 / scalar)
+    operator fun div(scalar: Int): Vec2s {
+        return Vec2s(elem0 / scalar, elem1 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar).toShort()
         elem1 = (elem1 / scalar).toShort()
     }
 
 
-
-    operator fun get(i: Int) : Short {
-        return when(i) {
+    operator fun get(i: Int): Short {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             else -> error("Attempted to retrieve invalid element from 2 dimension vector")
@@ -1281,18 +1358,18 @@ data class Vec2s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
     }
 
     operator fun set(i: Int, t: Short) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             else -> error("Attempted to set invalid element from 2 dimension vector")
         }
     }
 
-    operator fun get(axis: Axis) : Short {
+    operator fun get(axis: Axis): Short {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Short {
+    operator fun get(axis: Axis2D): Short {
         return get(axis.ordinal)
     }
 
@@ -1300,37 +1377,52 @@ data class Vec2s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Short) {
+    operator fun get(axis: Axis2D, t: Short) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec2s) : Int = elem0 * other.elem0 + elem1 * other.elem1
+    fun dot(other: Vec2s): Int = elem0 * other.elem0 + elem1 * other.elem1
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
 
 
+    fun toFloat(): Vec2f {
+        return Vec2f(elem0.toFloat(), elem1.toFloat())
+    }
 
-    fun toFloat() : Vec2f { return Vec2f(elem0.toFloat(), elem1.toFloat()) }
+    override fun toString(): String {
+        return "Vec2s($elem0,$elem1)"
+    }
 
-    override fun toString(): String { return "Vec2s($elem0,$elem1)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec2s
+
+        return elem0 == other.elem0 && elem1 == other.elem1
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        return result
+    }
 }
 
 
-data class Vec3s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(), var elem2 : Short = 0.toShort()) {
-    constructor(arg0 : Int, arg1 : Int, arg2 : Int) : this(arg0.toShort(), arg1.toShort(), arg2.toShort()) {}
+class Vec3s(var elem0: Short = 0.toShort(), var elem1: Short = 0.toShort(), var elem2: Short = 0.toShort()) {
+    constructor(arg0: Int, arg1: Int, arg2: Int) : this(arg0.toShort(), arg1.toShort(), arg2.toShort()) {}
 
 
-    operator fun invoke(arg0 : Short, arg1 : Short, arg2 : Short) {
+    operator fun invoke(arg0: Short, arg1: Short, arg2: Short) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
     }
-
 
 
     inline var x: Short
@@ -1375,94 +1467,92 @@ data class Vec3s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
         }
 
 
-
-    operator fun plus(other : Vec3s) : Vec3s {
-        return Vec3s(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2)
+    operator fun plus(other: Vec3s): Vec3s {
+        return Vec3s(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2)
     }
 
-    operator fun plusAssign(other : Vec3s) {
+    operator fun plusAssign(other: Vec3s) {
         elem0 = (elem0 + other.elem0).toShort()
         elem1 = (elem1 + other.elem1).toShort()
         elem2 = (elem2 + other.elem2).toShort()
     }
 
-    operator fun plus(scalar : Int) : Vec3s {
-        return Vec3s(elem0 + scalar,elem1 + scalar,elem2 + scalar)
+    operator fun plus(scalar: Int): Vec3s {
+        return Vec3s(elem0 + scalar, elem1 + scalar, elem2 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar).toShort()
         elem1 = (elem1 + scalar).toShort()
         elem2 = (elem2 + scalar).toShort()
     }
 
 
-    operator fun minus(other : Vec3s) : Vec3s {
-        return Vec3s(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2)
+    operator fun minus(other: Vec3s): Vec3s {
+        return Vec3s(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2)
     }
 
-    operator fun minusAssign(other : Vec3s) {
+    operator fun minusAssign(other: Vec3s) {
         elem0 = (elem0 - other.elem0).toShort()
         elem1 = (elem1 - other.elem1).toShort()
         elem2 = (elem2 - other.elem2).toShort()
     }
 
-    operator fun minus(scalar : Int) : Vec3s {
-        return Vec3s(elem0 - scalar,elem1 - scalar,elem2 - scalar)
+    operator fun minus(scalar: Int): Vec3s {
+        return Vec3s(elem0 - scalar, elem1 - scalar, elem2 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar).toShort()
         elem1 = (elem1 - scalar).toShort()
         elem2 = (elem2 - scalar).toShort()
     }
 
 
-    operator fun times(other : Vec3s) : Vec3s {
-        return Vec3s(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2)
+    operator fun times(other: Vec3s): Vec3s {
+        return Vec3s(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2)
     }
 
-    operator fun timesAssign(other : Vec3s) {
+    operator fun timesAssign(other: Vec3s) {
         elem0 = (elem0 * other.elem0).toShort()
         elem1 = (elem1 * other.elem1).toShort()
         elem2 = (elem2 * other.elem2).toShort()
     }
 
-    operator fun times(scalar : Int) : Vec3s {
-        return Vec3s(elem0 * scalar,elem1 * scalar,elem2 * scalar)
+    operator fun times(scalar: Int): Vec3s {
+        return Vec3s(elem0 * scalar, elem1 * scalar, elem2 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar).toShort()
         elem1 = (elem1 * scalar).toShort()
         elem2 = (elem2 * scalar).toShort()
     }
 
 
-    operator fun div(other : Vec3s) : Vec3s {
-        return Vec3s(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2)
+    operator fun div(other: Vec3s): Vec3s {
+        return Vec3s(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2)
     }
 
-    operator fun divAssign(other : Vec3s) {
+    operator fun divAssign(other: Vec3s) {
         elem0 = (elem0 / other.elem0).toShort()
         elem1 = (elem1 / other.elem1).toShort()
         elem2 = (elem2 / other.elem2).toShort()
     }
 
-    operator fun div(scalar : Int) : Vec3s {
-        return Vec3s(elem0 / scalar,elem1 / scalar,elem2 / scalar)
+    operator fun div(scalar: Int): Vec3s {
+        return Vec3s(elem0 / scalar, elem1 / scalar, elem2 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar).toShort()
         elem1 = (elem1 / scalar).toShort()
         elem2 = (elem2 / scalar).toShort()
     }
 
 
-
-    operator fun get(i: Int) : Short {
-        return when(i) {
+    operator fun get(i: Int): Short {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -1471,7 +1561,7 @@ data class Vec3s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
     }
 
     operator fun set(i: Int, t: Short) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -1479,11 +1569,11 @@ data class Vec3s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
         }
     }
 
-    operator fun get(axis: Axis) : Short {
+    operator fun get(axis: Axis): Short {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Short {
+    operator fun get(axis: Axis2D): Short {
         return get(axis.ordinal)
     }
 
@@ -1491,38 +1581,56 @@ data class Vec3s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Short) {
+    operator fun get(axis: Axis2D, t: Short) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec3s) : Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
+    fun dot(other: Vec3s): Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
 
 
+    fun cross(other: Vec3s): Vec3s = Vec3s(elem1 * other.elem2 - other.elem1 * elem2, elem2 * other.elem0 - other.elem2 * elem0, elem0 * other.elem1 - other.elem0 * elem1)
 
-    fun cross(other : Vec3s) : Vec3s = Vec3s(elem1*other.elem2-other.elem1*elem2,elem2*other.elem0-other.elem2*elem0,elem0*other.elem1-other.elem0*elem1)
+    fun toFloat(): Vec3f {
+        return Vec3f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat())
+    }
 
-    fun toFloat() : Vec3f { return Vec3f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat()) }
+    override fun toString(): String {
+        return "Vec3s($elem0,$elem1,$elem2)"
+    }
 
-    override fun toString(): String { return "Vec3s($elem0,$elem1,$elem2)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec3s
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        return result
+    }
 }
 
 
-data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(), var elem2 : Short = 0.toShort(), var elem3 : Short = 0.toShort()) {
-    constructor(arg0 : Int, arg1 : Int, arg2 : Int, arg3 : Int) : this(arg0.toShort(), arg1.toShort(), arg2.toShort(), arg3.toShort()) {}
+class Vec4s(var elem0: Short = 0.toShort(), var elem1: Short = 0.toShort(), var elem2: Short = 0.toShort(), var elem3: Short = 0.toShort()) {
+    constructor(arg0: Int, arg1: Int, arg2: Int, arg3: Int) : this(arg0.toShort(), arg1.toShort(), arg2.toShort(), arg3.toShort()) {}
 
 
-    operator fun invoke(arg0 : Short, arg1 : Short, arg2 : Short, arg3 : Short) {
+    operator fun invoke(arg0: Short, arg1: Short, arg2: Short, arg3: Short) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
         elem3 = arg3
     }
-
 
 
     inline var x: Short
@@ -1581,23 +1689,22 @@ data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
         }
 
 
-
-    operator fun plus(other : Vec4s) : Vec4s {
-        return Vec4s(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2,elem3 + other.elem3)
+    operator fun plus(other: Vec4s): Vec4s {
+        return Vec4s(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2, elem3 + other.elem3)
     }
 
-    operator fun plusAssign(other : Vec4s) {
+    operator fun plusAssign(other: Vec4s) {
         elem0 = (elem0 + other.elem0).toShort()
         elem1 = (elem1 + other.elem1).toShort()
         elem2 = (elem2 + other.elem2).toShort()
         elem3 = (elem3 + other.elem3).toShort()
     }
 
-    operator fun plus(scalar : Int) : Vec4s {
-        return Vec4s(elem0 + scalar,elem1 + scalar,elem2 + scalar,elem3 + scalar)
+    operator fun plus(scalar: Int): Vec4s {
+        return Vec4s(elem0 + scalar, elem1 + scalar, elem2 + scalar, elem3 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar).toShort()
         elem1 = (elem1 + scalar).toShort()
         elem2 = (elem2 + scalar).toShort()
@@ -1605,22 +1712,22 @@ data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
     }
 
 
-    operator fun minus(other : Vec4s) : Vec4s {
-        return Vec4s(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2,elem3 - other.elem3)
+    operator fun minus(other: Vec4s): Vec4s {
+        return Vec4s(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2, elem3 - other.elem3)
     }
 
-    operator fun minusAssign(other : Vec4s) {
+    operator fun minusAssign(other: Vec4s) {
         elem0 = (elem0 - other.elem0).toShort()
         elem1 = (elem1 - other.elem1).toShort()
         elem2 = (elem2 - other.elem2).toShort()
         elem3 = (elem3 - other.elem3).toShort()
     }
 
-    operator fun minus(scalar : Int) : Vec4s {
-        return Vec4s(elem0 - scalar,elem1 - scalar,elem2 - scalar,elem3 - scalar)
+    operator fun minus(scalar: Int): Vec4s {
+        return Vec4s(elem0 - scalar, elem1 - scalar, elem2 - scalar, elem3 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar).toShort()
         elem1 = (elem1 - scalar).toShort()
         elem2 = (elem2 - scalar).toShort()
@@ -1628,22 +1735,22 @@ data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
     }
 
 
-    operator fun times(other : Vec4s) : Vec4s {
-        return Vec4s(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2,elem3 * other.elem3)
+    operator fun times(other: Vec4s): Vec4s {
+        return Vec4s(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2, elem3 * other.elem3)
     }
 
-    operator fun timesAssign(other : Vec4s) {
+    operator fun timesAssign(other: Vec4s) {
         elem0 = (elem0 * other.elem0).toShort()
         elem1 = (elem1 * other.elem1).toShort()
         elem2 = (elem2 * other.elem2).toShort()
         elem3 = (elem3 * other.elem3).toShort()
     }
 
-    operator fun times(scalar : Int) : Vec4s {
-        return Vec4s(elem0 * scalar,elem1 * scalar,elem2 * scalar,elem3 * scalar)
+    operator fun times(scalar: Int): Vec4s {
+        return Vec4s(elem0 * scalar, elem1 * scalar, elem2 * scalar, elem3 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar).toShort()
         elem1 = (elem1 * scalar).toShort()
         elem2 = (elem2 * scalar).toShort()
@@ -1651,22 +1758,22 @@ data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
     }
 
 
-    operator fun div(other : Vec4s) : Vec4s {
-        return Vec4s(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2,elem3 / other.elem3)
+    operator fun div(other: Vec4s): Vec4s {
+        return Vec4s(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2, elem3 / other.elem3)
     }
 
-    operator fun divAssign(other : Vec4s) {
+    operator fun divAssign(other: Vec4s) {
         elem0 = (elem0 / other.elem0).toShort()
         elem1 = (elem1 / other.elem1).toShort()
         elem2 = (elem2 / other.elem2).toShort()
         elem3 = (elem3 / other.elem3).toShort()
     }
 
-    operator fun div(scalar : Int) : Vec4s {
-        return Vec4s(elem0 / scalar,elem1 / scalar,elem2 / scalar,elem3 / scalar)
+    operator fun div(scalar: Int): Vec4s {
+        return Vec4s(elem0 / scalar, elem1 / scalar, elem2 / scalar, elem3 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar).toShort()
         elem1 = (elem1 / scalar).toShort()
         elem2 = (elem2 / scalar).toShort()
@@ -1674,9 +1781,8 @@ data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
     }
 
 
-
-    operator fun get(i: Int) : Short {
-        return when(i) {
+    operator fun get(i: Int): Short {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -1686,7 +1792,7 @@ data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
     }
 
     operator fun set(i: Int, t: Short) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -1695,11 +1801,11 @@ data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
         }
     }
 
-    operator fun get(axis: Axis) : Short {
+    operator fun get(axis: Axis): Short {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Short {
+    operator fun get(axis: Axis2D): Short {
         return get(axis.ordinal)
     }
 
@@ -1707,36 +1813,53 @@ data class Vec4s(var elem0 : Short = 0.toShort(), var elem1 : Short = 0.toShort(
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Short) {
+    operator fun get(axis: Axis2D, t: Short) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec4s) : Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
+    fun dot(other: Vec4s): Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
 
 
+    fun toFloat(): Vec4f {
+        return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat())
+    }
 
-    fun toFloat() : Vec4f { return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat()) }
+    override fun toString(): String {
+        return "Vec4s($elem0,$elem1,$elem2,$elem3)"
+    }
 
-    override fun toString(): String { return "Vec4s($elem0,$elem1,$elem2,$elem3)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec4s
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2 && elem3 == other.elem3
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        result = result * 31 + elem3.hashCode()
+        return result
+    }
 }
 
 
-data class Vec2b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte()) {
-    constructor(arg0 : Int, arg1 : Int) : this(arg0.toByte(), arg1.toByte()) {}
+class Vec2b(var elem0: Byte = 0.toByte(), var elem1: Byte = 0.toByte()) {
+    constructor(arg0: Int, arg1: Int) : this(arg0.toByte(), arg1.toByte()) {}
 
 
-    operator fun invoke(arg0 : Byte, arg1 : Byte) {
+    operator fun invoke(arg0: Byte, arg1: Byte) {
         elem0 = arg0
         elem1 = arg1
     }
-
 
 
     inline var x: Byte
@@ -1753,86 +1876,84 @@ data class Vec2b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte()) {
         }
 
 
-
-    operator fun plus(other : Vec2b) : Vec2b {
-        return Vec2b(elem0 + other.elem0,elem1 + other.elem1)
+    operator fun plus(other: Vec2b): Vec2b {
+        return Vec2b(elem0 + other.elem0, elem1 + other.elem1)
     }
 
-    operator fun plusAssign(other : Vec2b) {
+    operator fun plusAssign(other: Vec2b) {
         elem0 = (elem0 + other.elem0).toByte()
         elem1 = (elem1 + other.elem1).toByte()
     }
 
-    operator fun plus(scalar : Int) : Vec2b {
-        return Vec2b(elem0 + scalar,elem1 + scalar)
+    operator fun plus(scalar: Int): Vec2b {
+        return Vec2b(elem0 + scalar, elem1 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar).toByte()
         elem1 = (elem1 + scalar).toByte()
     }
 
 
-    operator fun minus(other : Vec2b) : Vec2b {
-        return Vec2b(elem0 - other.elem0,elem1 - other.elem1)
+    operator fun minus(other: Vec2b): Vec2b {
+        return Vec2b(elem0 - other.elem0, elem1 - other.elem1)
     }
 
-    operator fun minusAssign(other : Vec2b) {
+    operator fun minusAssign(other: Vec2b) {
         elem0 = (elem0 - other.elem0).toByte()
         elem1 = (elem1 - other.elem1).toByte()
     }
 
-    operator fun minus(scalar : Int) : Vec2b {
-        return Vec2b(elem0 - scalar,elem1 - scalar)
+    operator fun minus(scalar: Int): Vec2b {
+        return Vec2b(elem0 - scalar, elem1 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar).toByte()
         elem1 = (elem1 - scalar).toByte()
     }
 
 
-    operator fun times(other : Vec2b) : Vec2b {
-        return Vec2b(elem0 * other.elem0,elem1 * other.elem1)
+    operator fun times(other: Vec2b): Vec2b {
+        return Vec2b(elem0 * other.elem0, elem1 * other.elem1)
     }
 
-    operator fun timesAssign(other : Vec2b) {
+    operator fun timesAssign(other: Vec2b) {
         elem0 = (elem0 * other.elem0).toByte()
         elem1 = (elem1 * other.elem1).toByte()
     }
 
-    operator fun times(scalar : Int) : Vec2b {
-        return Vec2b(elem0 * scalar,elem1 * scalar)
+    operator fun times(scalar: Int): Vec2b {
+        return Vec2b(elem0 * scalar, elem1 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar).toByte()
         elem1 = (elem1 * scalar).toByte()
     }
 
 
-    operator fun div(other : Vec2b) : Vec2b {
-        return Vec2b(elem0 / other.elem0,elem1 / other.elem1)
+    operator fun div(other: Vec2b): Vec2b {
+        return Vec2b(elem0 / other.elem0, elem1 / other.elem1)
     }
 
-    operator fun divAssign(other : Vec2b) {
+    operator fun divAssign(other: Vec2b) {
         elem0 = (elem0 / other.elem0).toByte()
         elem1 = (elem1 / other.elem1).toByte()
     }
 
-    operator fun div(scalar : Int) : Vec2b {
-        return Vec2b(elem0 / scalar,elem1 / scalar)
+    operator fun div(scalar: Int): Vec2b {
+        return Vec2b(elem0 / scalar, elem1 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar).toByte()
         elem1 = (elem1 / scalar).toByte()
     }
 
 
-
-    operator fun get(i: Int) : Byte {
-        return when(i) {
+    operator fun get(i: Int): Byte {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             else -> error("Attempted to retrieve invalid element from 2 dimension vector")
@@ -1840,18 +1961,18 @@ data class Vec2b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte()) {
     }
 
     operator fun set(i: Int, t: Byte) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             else -> error("Attempted to set invalid element from 2 dimension vector")
         }
     }
 
-    operator fun get(axis: Axis) : Byte {
+    operator fun get(axis: Axis): Byte {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Byte {
+    operator fun get(axis: Axis2D): Byte {
         return get(axis.ordinal)
     }
 
@@ -1859,37 +1980,52 @@ data class Vec2b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte()) {
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Byte) {
+    operator fun get(axis: Axis2D, t: Byte) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec2b) : Int = elem0 * other.elem0 + elem1 * other.elem1
+    fun dot(other: Vec2b): Int = elem0 * other.elem0 + elem1 * other.elem1
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
 
 
+    fun toFloat(): Vec2f {
+        return Vec2f(elem0.toFloat(), elem1.toFloat())
+    }
 
-    fun toFloat() : Vec2f { return Vec2f(elem0.toFloat(), elem1.toFloat()) }
+    override fun toString(): String {
+        return "Vec2b($elem0,$elem1)"
+    }
 
-    override fun toString(): String { return "Vec2b($elem0,$elem1)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec2b
+
+        return elem0 == other.elem0 && elem1 == other.elem1
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        return result
+    }
 }
 
 
-data class Vec3b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), var elem2 : Byte = 0.toByte()) {
-    constructor(arg0 : Int, arg1 : Int, arg2 : Int) : this(arg0.toByte(), arg1.toByte(), arg2.toByte()) {}
+class Vec3b(var elem0: Byte = 0.toByte(), var elem1: Byte = 0.toByte(), var elem2: Byte = 0.toByte()) {
+    constructor(arg0: Int, arg1: Int, arg2: Int) : this(arg0.toByte(), arg1.toByte(), arg2.toByte()) {}
 
 
-    operator fun invoke(arg0 : Byte, arg1 : Byte, arg2 : Byte) {
+    operator fun invoke(arg0: Byte, arg1: Byte, arg2: Byte) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
     }
-
 
 
     inline var x: Byte
@@ -1934,94 +2070,92 @@ data class Vec3b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
         }
 
 
-
-    operator fun plus(other : Vec3b) : Vec3b {
-        return Vec3b(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2)
+    operator fun plus(other: Vec3b): Vec3b {
+        return Vec3b(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2)
     }
 
-    operator fun plusAssign(other : Vec3b) {
+    operator fun plusAssign(other: Vec3b) {
         elem0 = (elem0 + other.elem0).toByte()
         elem1 = (elem1 + other.elem1).toByte()
         elem2 = (elem2 + other.elem2).toByte()
     }
 
-    operator fun plus(scalar : Int) : Vec3b {
-        return Vec3b(elem0 + scalar,elem1 + scalar,elem2 + scalar)
+    operator fun plus(scalar: Int): Vec3b {
+        return Vec3b(elem0 + scalar, elem1 + scalar, elem2 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar).toByte()
         elem1 = (elem1 + scalar).toByte()
         elem2 = (elem2 + scalar).toByte()
     }
 
 
-    operator fun minus(other : Vec3b) : Vec3b {
-        return Vec3b(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2)
+    operator fun minus(other: Vec3b): Vec3b {
+        return Vec3b(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2)
     }
 
-    operator fun minusAssign(other : Vec3b) {
+    operator fun minusAssign(other: Vec3b) {
         elem0 = (elem0 - other.elem0).toByte()
         elem1 = (elem1 - other.elem1).toByte()
         elem2 = (elem2 - other.elem2).toByte()
     }
 
-    operator fun minus(scalar : Int) : Vec3b {
-        return Vec3b(elem0 - scalar,elem1 - scalar,elem2 - scalar)
+    operator fun minus(scalar: Int): Vec3b {
+        return Vec3b(elem0 - scalar, elem1 - scalar, elem2 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar).toByte()
         elem1 = (elem1 - scalar).toByte()
         elem2 = (elem2 - scalar).toByte()
     }
 
 
-    operator fun times(other : Vec3b) : Vec3b {
-        return Vec3b(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2)
+    operator fun times(other: Vec3b): Vec3b {
+        return Vec3b(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2)
     }
 
-    operator fun timesAssign(other : Vec3b) {
+    operator fun timesAssign(other: Vec3b) {
         elem0 = (elem0 * other.elem0).toByte()
         elem1 = (elem1 * other.elem1).toByte()
         elem2 = (elem2 * other.elem2).toByte()
     }
 
-    operator fun times(scalar : Int) : Vec3b {
-        return Vec3b(elem0 * scalar,elem1 * scalar,elem2 * scalar)
+    operator fun times(scalar: Int): Vec3b {
+        return Vec3b(elem0 * scalar, elem1 * scalar, elem2 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar).toByte()
         elem1 = (elem1 * scalar).toByte()
         elem2 = (elem2 * scalar).toByte()
     }
 
 
-    operator fun div(other : Vec3b) : Vec3b {
-        return Vec3b(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2)
+    operator fun div(other: Vec3b): Vec3b {
+        return Vec3b(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2)
     }
 
-    operator fun divAssign(other : Vec3b) {
+    operator fun divAssign(other: Vec3b) {
         elem0 = (elem0 / other.elem0).toByte()
         elem1 = (elem1 / other.elem1).toByte()
         elem2 = (elem2 / other.elem2).toByte()
     }
 
-    operator fun div(scalar : Int) : Vec3b {
-        return Vec3b(elem0 / scalar,elem1 / scalar,elem2 / scalar)
+    operator fun div(scalar: Int): Vec3b {
+        return Vec3b(elem0 / scalar, elem1 / scalar, elem2 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar).toByte()
         elem1 = (elem1 / scalar).toByte()
         elem2 = (elem2 / scalar).toByte()
     }
 
 
-
-    operator fun get(i: Int) : Byte {
-        return when(i) {
+    operator fun get(i: Int): Byte {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -2030,7 +2164,7 @@ data class Vec3b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
     }
 
     operator fun set(i: Int, t: Byte) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -2038,11 +2172,11 @@ data class Vec3b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
         }
     }
 
-    operator fun get(axis: Axis) : Byte {
+    operator fun get(axis: Axis): Byte {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Byte {
+    operator fun get(axis: Axis2D): Byte {
         return get(axis.ordinal)
     }
 
@@ -2050,38 +2184,56 @@ data class Vec3b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Byte) {
+    operator fun get(axis: Axis2D, t: Byte) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec3b) : Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
+    fun dot(other: Vec3b): Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
 
 
+    fun cross(other: Vec3b): Vec3b = Vec3b(elem1 * other.elem2 - other.elem1 * elem2, elem2 * other.elem0 - other.elem2 * elem0, elem0 * other.elem1 - other.elem0 * elem1)
 
-    fun cross(other : Vec3b) : Vec3b = Vec3b(elem1*other.elem2-other.elem1*elem2,elem2*other.elem0-other.elem2*elem0,elem0*other.elem1-other.elem0*elem1)
+    fun toFloat(): Vec3f {
+        return Vec3f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat())
+    }
 
-    fun toFloat() : Vec3f { return Vec3f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat()) }
+    override fun toString(): String {
+        return "Vec3b($elem0,$elem1,$elem2)"
+    }
 
-    override fun toString(): String { return "Vec3b($elem0,$elem1,$elem2)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec3b
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        return result
+    }
 }
 
 
-data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), var elem2 : Byte = 0.toByte(), var elem3 : Byte = 0.toByte()) {
-    constructor(arg0 : Int, arg1 : Int, arg2 : Int, arg3 : Int) : this(arg0.toByte(), arg1.toByte(), arg2.toByte(), arg3.toByte()) {}
+class Vec4b(var elem0: Byte = 0.toByte(), var elem1: Byte = 0.toByte(), var elem2: Byte = 0.toByte(), var elem3: Byte = 0.toByte()) {
+    constructor(arg0: Int, arg1: Int, arg2: Int, arg3: Int) : this(arg0.toByte(), arg1.toByte(), arg2.toByte(), arg3.toByte()) {}
 
 
-    operator fun invoke(arg0 : Byte, arg1 : Byte, arg2 : Byte, arg3 : Byte) {
+    operator fun invoke(arg0: Byte, arg1: Byte, arg2: Byte, arg3: Byte) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
         elem3 = arg3
     }
-
 
 
     inline var x: Byte
@@ -2140,23 +2292,22 @@ data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
         }
 
 
-
-    operator fun plus(other : Vec4b) : Vec4b {
-        return Vec4b(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2,elem3 + other.elem3)
+    operator fun plus(other: Vec4b): Vec4b {
+        return Vec4b(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2, elem3 + other.elem3)
     }
 
-    operator fun plusAssign(other : Vec4b) {
+    operator fun plusAssign(other: Vec4b) {
         elem0 = (elem0 + other.elem0).toByte()
         elem1 = (elem1 + other.elem1).toByte()
         elem2 = (elem2 + other.elem2).toByte()
         elem3 = (elem3 + other.elem3).toByte()
     }
 
-    operator fun plus(scalar : Int) : Vec4b {
-        return Vec4b(elem0 + scalar,elem1 + scalar,elem2 + scalar,elem3 + scalar)
+    operator fun plus(scalar: Int): Vec4b {
+        return Vec4b(elem0 + scalar, elem1 + scalar, elem2 + scalar, elem3 + scalar)
     }
 
-    operator fun plusAssign(scalar : Int) {
+    operator fun plusAssign(scalar: Int) {
         elem0 = (elem0 + scalar).toByte()
         elem1 = (elem1 + scalar).toByte()
         elem2 = (elem2 + scalar).toByte()
@@ -2164,22 +2315,22 @@ data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
     }
 
 
-    operator fun minus(other : Vec4b) : Vec4b {
-        return Vec4b(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2,elem3 - other.elem3)
+    operator fun minus(other: Vec4b): Vec4b {
+        return Vec4b(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2, elem3 - other.elem3)
     }
 
-    operator fun minusAssign(other : Vec4b) {
+    operator fun minusAssign(other: Vec4b) {
         elem0 = (elem0 - other.elem0).toByte()
         elem1 = (elem1 - other.elem1).toByte()
         elem2 = (elem2 - other.elem2).toByte()
         elem3 = (elem3 - other.elem3).toByte()
     }
 
-    operator fun minus(scalar : Int) : Vec4b {
-        return Vec4b(elem0 - scalar,elem1 - scalar,elem2 - scalar,elem3 - scalar)
+    operator fun minus(scalar: Int): Vec4b {
+        return Vec4b(elem0 - scalar, elem1 - scalar, elem2 - scalar, elem3 - scalar)
     }
 
-    operator fun minusAssign(scalar : Int) {
+    operator fun minusAssign(scalar: Int) {
         elem0 = (elem0 - scalar).toByte()
         elem1 = (elem1 - scalar).toByte()
         elem2 = (elem2 - scalar).toByte()
@@ -2187,22 +2338,22 @@ data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
     }
 
 
-    operator fun times(other : Vec4b) : Vec4b {
-        return Vec4b(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2,elem3 * other.elem3)
+    operator fun times(other: Vec4b): Vec4b {
+        return Vec4b(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2, elem3 * other.elem3)
     }
 
-    operator fun timesAssign(other : Vec4b) {
+    operator fun timesAssign(other: Vec4b) {
         elem0 = (elem0 * other.elem0).toByte()
         elem1 = (elem1 * other.elem1).toByte()
         elem2 = (elem2 * other.elem2).toByte()
         elem3 = (elem3 * other.elem3).toByte()
     }
 
-    operator fun times(scalar : Int) : Vec4b {
-        return Vec4b(elem0 * scalar,elem1 * scalar,elem2 * scalar,elem3 * scalar)
+    operator fun times(scalar: Int): Vec4b {
+        return Vec4b(elem0 * scalar, elem1 * scalar, elem2 * scalar, elem3 * scalar)
     }
 
-    operator fun timesAssign(scalar : Int) {
+    operator fun timesAssign(scalar: Int) {
         elem0 = (elem0 * scalar).toByte()
         elem1 = (elem1 * scalar).toByte()
         elem2 = (elem2 * scalar).toByte()
@@ -2210,22 +2361,22 @@ data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
     }
 
 
-    operator fun div(other : Vec4b) : Vec4b {
-        return Vec4b(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2,elem3 / other.elem3)
+    operator fun div(other: Vec4b): Vec4b {
+        return Vec4b(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2, elem3 / other.elem3)
     }
 
-    operator fun divAssign(other : Vec4b) {
+    operator fun divAssign(other: Vec4b) {
         elem0 = (elem0 / other.elem0).toByte()
         elem1 = (elem1 / other.elem1).toByte()
         elem2 = (elem2 / other.elem2).toByte()
         elem3 = (elem3 / other.elem3).toByte()
     }
 
-    operator fun div(scalar : Int) : Vec4b {
-        return Vec4b(elem0 / scalar,elem1 / scalar,elem2 / scalar,elem3 / scalar)
+    operator fun div(scalar: Int): Vec4b {
+        return Vec4b(elem0 / scalar, elem1 / scalar, elem2 / scalar, elem3 / scalar)
     }
 
-    operator fun divAssign(scalar : Int) {
+    operator fun divAssign(scalar: Int) {
         elem0 = (elem0 / scalar).toByte()
         elem1 = (elem1 / scalar).toByte()
         elem2 = (elem2 / scalar).toByte()
@@ -2233,9 +2384,8 @@ data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
     }
 
 
-
-    operator fun get(i: Int) : Byte {
-        return when(i) {
+    operator fun get(i: Int): Byte {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -2245,7 +2395,7 @@ data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
     }
 
     operator fun set(i: Int, t: Byte) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -2254,11 +2404,11 @@ data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
         }
     }
 
-    operator fun get(axis: Axis) : Byte {
+    operator fun get(axis: Axis): Byte {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Byte {
+    operator fun get(axis: Axis2D): Byte {
         return get(axis.ordinal)
     }
 
@@ -2266,36 +2416,53 @@ data class Vec4b(var elem0 : Byte = 0.toByte(), var elem1 : Byte = 0.toByte(), v
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Byte) {
+    operator fun get(axis: Axis2D, t: Byte) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec4b) : Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
+    fun dot(other: Vec4b): Int = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
 
-    fun magnitude2() : Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
+    fun magnitude2(): Int = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
 
 
+    fun toFloat(): Vec4f {
+        return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat())
+    }
 
-    fun toFloat() : Vec4f { return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat()) }
+    override fun toString(): String {
+        return "Vec4b($elem0,$elem1,$elem2,$elem3)"
+    }
 
-    override fun toString(): String { return "Vec4b($elem0,$elem1,$elem2,$elem3)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec4b
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2 && elem3 == other.elem3
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        result = result * 31 + elem3.hashCode()
+        return result
+    }
 }
 
 
-data class Vec2ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()) {
-    constructor(arg0 : UInt, arg1 : UInt) : this(arg0.toUByte(), arg1.toUByte()) {}
+class Vec2ub(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte()) {
+    constructor(arg0: UInt, arg1: UInt) : this(arg0.toUByte(), arg1.toUByte()) {}
 
 
-    operator fun invoke(arg0 : UByte, arg1 : UByte) {
+    operator fun invoke(arg0: UByte, arg1: UByte) {
         elem0 = arg0
         elem1 = arg1
     }
-
 
 
     inline var x: UByte
@@ -2312,86 +2479,84 @@ data class Vec2ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
         }
 
 
-
-    operator fun plus(other : Vec2ub) : Vec2ub {
-        return Vec2ub(elem0 + other.elem0,elem1 + other.elem1)
+    operator fun plus(other: Vec2ub): Vec2ub {
+        return Vec2ub(elem0 + other.elem0, elem1 + other.elem1)
     }
 
-    operator fun plusAssign(other : Vec2ub) {
+    operator fun plusAssign(other: Vec2ub) {
         elem0 = (elem0 + other.elem0).toUByte()
         elem1 = (elem1 + other.elem1).toUByte()
     }
 
-    operator fun plus(scalar : UInt) : Vec2ub {
-        return Vec2ub(elem0 + scalar,elem1 + scalar)
+    operator fun plus(scalar: UInt): Vec2ub {
+        return Vec2ub(elem0 + scalar, elem1 + scalar)
     }
 
-    operator fun plusAssign(scalar : UInt) {
+    operator fun plusAssign(scalar: UInt) {
         elem0 = (elem0 + scalar).toUByte()
         elem1 = (elem1 + scalar).toUByte()
     }
 
 
-    operator fun minus(other : Vec2ub) : Vec2ub {
-        return Vec2ub(elem0 - other.elem0,elem1 - other.elem1)
+    operator fun minus(other: Vec2ub): Vec2ub {
+        return Vec2ub(elem0 - other.elem0, elem1 - other.elem1)
     }
 
-    operator fun minusAssign(other : Vec2ub) {
+    operator fun minusAssign(other: Vec2ub) {
         elem0 = (elem0 - other.elem0).toUByte()
         elem1 = (elem1 - other.elem1).toUByte()
     }
 
-    operator fun minus(scalar : UInt) : Vec2ub {
-        return Vec2ub(elem0 - scalar,elem1 - scalar)
+    operator fun minus(scalar: UInt): Vec2ub {
+        return Vec2ub(elem0 - scalar, elem1 - scalar)
     }
 
-    operator fun minusAssign(scalar : UInt) {
+    operator fun minusAssign(scalar: UInt) {
         elem0 = (elem0 - scalar).toUByte()
         elem1 = (elem1 - scalar).toUByte()
     }
 
 
-    operator fun times(other : Vec2ub) : Vec2ub {
-        return Vec2ub(elem0 * other.elem0,elem1 * other.elem1)
+    operator fun times(other: Vec2ub): Vec2ub {
+        return Vec2ub(elem0 * other.elem0, elem1 * other.elem1)
     }
 
-    operator fun timesAssign(other : Vec2ub) {
+    operator fun timesAssign(other: Vec2ub) {
         elem0 = (elem0 * other.elem0).toUByte()
         elem1 = (elem1 * other.elem1).toUByte()
     }
 
-    operator fun times(scalar : UInt) : Vec2ub {
-        return Vec2ub(elem0 * scalar,elem1 * scalar)
+    operator fun times(scalar: UInt): Vec2ub {
+        return Vec2ub(elem0 * scalar, elem1 * scalar)
     }
 
-    operator fun timesAssign(scalar : UInt) {
+    operator fun timesAssign(scalar: UInt) {
         elem0 = (elem0 * scalar).toUByte()
         elem1 = (elem1 * scalar).toUByte()
     }
 
 
-    operator fun div(other : Vec2ub) : Vec2ub {
-        return Vec2ub(elem0 / other.elem0,elem1 / other.elem1)
+    operator fun div(other: Vec2ub): Vec2ub {
+        return Vec2ub(elem0 / other.elem0, elem1 / other.elem1)
     }
 
-    operator fun divAssign(other : Vec2ub) {
+    operator fun divAssign(other: Vec2ub) {
         elem0 = (elem0 / other.elem0).toUByte()
         elem1 = (elem1 / other.elem1).toUByte()
     }
 
-    operator fun div(scalar : UInt) : Vec2ub {
-        return Vec2ub(elem0 / scalar,elem1 / scalar)
+    operator fun div(scalar: UInt): Vec2ub {
+        return Vec2ub(elem0 / scalar, elem1 / scalar)
     }
 
-    operator fun divAssign(scalar : UInt) {
+    operator fun divAssign(scalar: UInt) {
         elem0 = (elem0 / scalar).toUByte()
         elem1 = (elem1 / scalar).toUByte()
     }
 
 
-
-    operator fun get(i: Int) : UByte {
-        return when(i) {
+    operator fun get(i: Int): UByte {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             else -> error("Attempted to retrieve invalid element from 2 dimension vector")
@@ -2399,18 +2564,18 @@ data class Vec2ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
     }
 
     operator fun set(i: Int, t: UByte) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             else -> error("Attempted to set invalid element from 2 dimension vector")
         }
     }
 
-    operator fun get(axis: Axis) : UByte {
+    operator fun get(axis: Axis): UByte {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : UByte {
+    operator fun get(axis: Axis2D): UByte {
         return get(axis.ordinal)
     }
 
@@ -2418,37 +2583,52 @@ data class Vec2ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : UByte) {
+    operator fun get(axis: Axis2D, t: UByte) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec2ub) : UInt = elem0 * other.elem0 + elem1 * other.elem1
+    fun dot(other: Vec2ub): UInt = elem0 * other.elem0 + elem1 * other.elem1
 
-    fun magnitude2() : UInt = elem0 * elem0 + elem1 * elem1
+    fun magnitude2(): UInt = elem0 * elem0 + elem1 * elem1
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toFloat())
 
 
+    fun toFloat(): Vec2f {
+        return Vec2f(elem0.toFloat(), elem1.toFloat())
+    }
 
-    fun toFloat() : Vec2f { return Vec2f(elem0.toFloat(), elem1.toFloat()) }
+    override fun toString(): String {
+        return "Vec2ub($elem0,$elem1)"
+    }
 
-    override fun toString(): String { return "Vec2ub($elem0,$elem1)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec2ub
+
+        return elem0 == other.elem0 && elem1 == other.elem1
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        return result
+    }
 }
 
 
-data class Vec3ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte(), var elem2 : UByte = 0.toUByte()) {
-    constructor(arg0 : UInt, arg1 : UInt, arg2 : UInt) : this(arg0.toUByte(), arg1.toUByte(), arg2.toUByte()) {}
+class Vec3ub(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var elem2: UByte = 0.toUByte()) {
+    constructor(arg0: UInt, arg1: UInt, arg2: UInt) : this(arg0.toUByte(), arg1.toUByte(), arg2.toUByte()) {}
 
 
-    operator fun invoke(arg0 : UByte, arg1 : UByte, arg2 : UByte) {
+    operator fun invoke(arg0: UByte, arg1: UByte, arg2: UByte) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
     }
-
 
 
     inline var x: UByte
@@ -2493,94 +2673,92 @@ data class Vec3ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
         }
 
 
-
-    operator fun plus(other : Vec3ub) : Vec3ub {
-        return Vec3ub(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2)
+    operator fun plus(other: Vec3ub): Vec3ub {
+        return Vec3ub(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2)
     }
 
-    operator fun plusAssign(other : Vec3ub) {
+    operator fun plusAssign(other: Vec3ub) {
         elem0 = (elem0 + other.elem0).toUByte()
         elem1 = (elem1 + other.elem1).toUByte()
         elem2 = (elem2 + other.elem2).toUByte()
     }
 
-    operator fun plus(scalar : UInt) : Vec3ub {
-        return Vec3ub(elem0 + scalar,elem1 + scalar,elem2 + scalar)
+    operator fun plus(scalar: UInt): Vec3ub {
+        return Vec3ub(elem0 + scalar, elem1 + scalar, elem2 + scalar)
     }
 
-    operator fun plusAssign(scalar : UInt) {
+    operator fun plusAssign(scalar: UInt) {
         elem0 = (elem0 + scalar).toUByte()
         elem1 = (elem1 + scalar).toUByte()
         elem2 = (elem2 + scalar).toUByte()
     }
 
 
-    operator fun minus(other : Vec3ub) : Vec3ub {
-        return Vec3ub(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2)
+    operator fun minus(other: Vec3ub): Vec3ub {
+        return Vec3ub(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2)
     }
 
-    operator fun minusAssign(other : Vec3ub) {
+    operator fun minusAssign(other: Vec3ub) {
         elem0 = (elem0 - other.elem0).toUByte()
         elem1 = (elem1 - other.elem1).toUByte()
         elem2 = (elem2 - other.elem2).toUByte()
     }
 
-    operator fun minus(scalar : UInt) : Vec3ub {
-        return Vec3ub(elem0 - scalar,elem1 - scalar,elem2 - scalar)
+    operator fun minus(scalar: UInt): Vec3ub {
+        return Vec3ub(elem0 - scalar, elem1 - scalar, elem2 - scalar)
     }
 
-    operator fun minusAssign(scalar : UInt) {
+    operator fun minusAssign(scalar: UInt) {
         elem0 = (elem0 - scalar).toUByte()
         elem1 = (elem1 - scalar).toUByte()
         elem2 = (elem2 - scalar).toUByte()
     }
 
 
-    operator fun times(other : Vec3ub) : Vec3ub {
-        return Vec3ub(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2)
+    operator fun times(other: Vec3ub): Vec3ub {
+        return Vec3ub(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2)
     }
 
-    operator fun timesAssign(other : Vec3ub) {
+    operator fun timesAssign(other: Vec3ub) {
         elem0 = (elem0 * other.elem0).toUByte()
         elem1 = (elem1 * other.elem1).toUByte()
         elem2 = (elem2 * other.elem2).toUByte()
     }
 
-    operator fun times(scalar : UInt) : Vec3ub {
-        return Vec3ub(elem0 * scalar,elem1 * scalar,elem2 * scalar)
+    operator fun times(scalar: UInt): Vec3ub {
+        return Vec3ub(elem0 * scalar, elem1 * scalar, elem2 * scalar)
     }
 
-    operator fun timesAssign(scalar : UInt) {
+    operator fun timesAssign(scalar: UInt) {
         elem0 = (elem0 * scalar).toUByte()
         elem1 = (elem1 * scalar).toUByte()
         elem2 = (elem2 * scalar).toUByte()
     }
 
 
-    operator fun div(other : Vec3ub) : Vec3ub {
-        return Vec3ub(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2)
+    operator fun div(other: Vec3ub): Vec3ub {
+        return Vec3ub(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2)
     }
 
-    operator fun divAssign(other : Vec3ub) {
+    operator fun divAssign(other: Vec3ub) {
         elem0 = (elem0 / other.elem0).toUByte()
         elem1 = (elem1 / other.elem1).toUByte()
         elem2 = (elem2 / other.elem2).toUByte()
     }
 
-    operator fun div(scalar : UInt) : Vec3ub {
-        return Vec3ub(elem0 / scalar,elem1 / scalar,elem2 / scalar)
+    operator fun div(scalar: UInt): Vec3ub {
+        return Vec3ub(elem0 / scalar, elem1 / scalar, elem2 / scalar)
     }
 
-    operator fun divAssign(scalar : UInt) {
+    operator fun divAssign(scalar: UInt) {
         elem0 = (elem0 / scalar).toUByte()
         elem1 = (elem1 / scalar).toUByte()
         elem2 = (elem2 / scalar).toUByte()
     }
 
 
-
-    operator fun get(i: Int) : UByte {
-        return when(i) {
+    operator fun get(i: Int): UByte {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -2589,7 +2767,7 @@ data class Vec3ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
     }
 
     operator fun set(i: Int, t: UByte) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -2597,11 +2775,11 @@ data class Vec3ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
         }
     }
 
-    operator fun get(axis: Axis) : UByte {
+    operator fun get(axis: Axis): UByte {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : UByte {
+    operator fun get(axis: Axis2D): UByte {
         return get(axis.ordinal)
     }
 
@@ -2609,38 +2787,56 @@ data class Vec3ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : UByte) {
+    operator fun get(axis: Axis2D, t: UByte) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec3ub) : UInt = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
+    fun dot(other: Vec3ub): UInt = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
 
-    fun magnitude2() : UInt = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
+    fun magnitude2(): UInt = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toFloat())
 
 
+    fun cross(other: Vec3ub): Vec3ub = Vec3ub(elem1 * other.elem2 - other.elem1 * elem2, elem2 * other.elem0 - other.elem2 * elem0, elem0 * other.elem1 - other.elem0 * elem1)
 
-    fun cross(other : Vec3ub) : Vec3ub = Vec3ub(elem1*other.elem2-other.elem1*elem2,elem2*other.elem0-other.elem2*elem0,elem0*other.elem1-other.elem0*elem1)
+    fun toFloat(): Vec3f {
+        return Vec3f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat())
+    }
 
-    fun toFloat() : Vec3f { return Vec3f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat()) }
+    override fun toString(): String {
+        return "Vec3ub($elem0,$elem1,$elem2)"
+    }
 
-    override fun toString(): String { return "Vec3ub($elem0,$elem1,$elem2)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec3ub
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        return result
+    }
 }
 
 
-data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte(), var elem2 : UByte = 0.toUByte(), var elem3 : UByte = 0.toUByte()) {
-    constructor(arg0 : UInt, arg1 : UInt, arg2 : UInt, arg3 : UInt) : this(arg0.toUByte(), arg1.toUByte(), arg2.toUByte(), arg3.toUByte()) {}
+class RGBA(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var elem2: UByte = 0.toUByte(), var elem3: UByte = 0.toUByte()) {
+    constructor(arg0: UInt, arg1: UInt, arg2: UInt, arg3: UInt) : this(arg0.toUByte(), arg1.toUByte(), arg2.toUByte(), arg3.toUByte()) {}
 
 
-    operator fun invoke(arg0 : UByte, arg1 : UByte, arg2 : UByte, arg3 : UByte) {
+    operator fun invoke(arg0: UByte, arg1: UByte, arg2: UByte, arg3: UByte) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
         elem3 = arg3
     }
-
 
 
     inline var x: UByte
@@ -2699,23 +2895,22 @@ data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()
         }
 
 
-
-    operator fun plus(other : RGBA) : RGBA {
-        return RGBA(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2,elem3 + other.elem3)
+    operator fun plus(other: RGBA): RGBA {
+        return RGBA(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2, elem3 + other.elem3)
     }
 
-    operator fun plusAssign(other : RGBA) {
+    operator fun plusAssign(other: RGBA) {
         elem0 = (elem0 + other.elem0).toUByte()
         elem1 = (elem1 + other.elem1).toUByte()
         elem2 = (elem2 + other.elem2).toUByte()
         elem3 = (elem3 + other.elem3).toUByte()
     }
 
-    operator fun plus(scalar : UInt) : RGBA {
-        return RGBA(elem0 + scalar,elem1 + scalar,elem2 + scalar,elem3 + scalar)
+    operator fun plus(scalar: UInt): RGBA {
+        return RGBA(elem0 + scalar, elem1 + scalar, elem2 + scalar, elem3 + scalar)
     }
 
-    operator fun plusAssign(scalar : UInt) {
+    operator fun plusAssign(scalar: UInt) {
         elem0 = (elem0 + scalar).toUByte()
         elem1 = (elem1 + scalar).toUByte()
         elem2 = (elem2 + scalar).toUByte()
@@ -2723,22 +2918,22 @@ data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()
     }
 
 
-    operator fun minus(other : RGBA) : RGBA {
-        return RGBA(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2,elem3 - other.elem3)
+    operator fun minus(other: RGBA): RGBA {
+        return RGBA(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2, elem3 - other.elem3)
     }
 
-    operator fun minusAssign(other : RGBA) {
+    operator fun minusAssign(other: RGBA) {
         elem0 = (elem0 - other.elem0).toUByte()
         elem1 = (elem1 - other.elem1).toUByte()
         elem2 = (elem2 - other.elem2).toUByte()
         elem3 = (elem3 - other.elem3).toUByte()
     }
 
-    operator fun minus(scalar : UInt) : RGBA {
-        return RGBA(elem0 - scalar,elem1 - scalar,elem2 - scalar,elem3 - scalar)
+    operator fun minus(scalar: UInt): RGBA {
+        return RGBA(elem0 - scalar, elem1 - scalar, elem2 - scalar, elem3 - scalar)
     }
 
-    operator fun minusAssign(scalar : UInt) {
+    operator fun minusAssign(scalar: UInt) {
         elem0 = (elem0 - scalar).toUByte()
         elem1 = (elem1 - scalar).toUByte()
         elem2 = (elem2 - scalar).toUByte()
@@ -2746,22 +2941,22 @@ data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()
     }
 
 
-    operator fun times(other : RGBA) : RGBA {
-        return RGBA(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2,elem3 * other.elem3)
+    operator fun times(other: RGBA): RGBA {
+        return RGBA(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2, elem3 * other.elem3)
     }
 
-    operator fun timesAssign(other : RGBA) {
+    operator fun timesAssign(other: RGBA) {
         elem0 = (elem0 * other.elem0).toUByte()
         elem1 = (elem1 * other.elem1).toUByte()
         elem2 = (elem2 * other.elem2).toUByte()
         elem3 = (elem3 * other.elem3).toUByte()
     }
 
-    operator fun times(scalar : UInt) : RGBA {
-        return RGBA(elem0 * scalar,elem1 * scalar,elem2 * scalar,elem3 * scalar)
+    operator fun times(scalar: UInt): RGBA {
+        return RGBA(elem0 * scalar, elem1 * scalar, elem2 * scalar, elem3 * scalar)
     }
 
-    operator fun timesAssign(scalar : UInt) {
+    operator fun timesAssign(scalar: UInt) {
         elem0 = (elem0 * scalar).toUByte()
         elem1 = (elem1 * scalar).toUByte()
         elem2 = (elem2 * scalar).toUByte()
@@ -2769,22 +2964,22 @@ data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()
     }
 
 
-    operator fun div(other : RGBA) : RGBA {
-        return RGBA(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2,elem3 / other.elem3)
+    operator fun div(other: RGBA): RGBA {
+        return RGBA(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2, elem3 / other.elem3)
     }
 
-    operator fun divAssign(other : RGBA) {
+    operator fun divAssign(other: RGBA) {
         elem0 = (elem0 / other.elem0).toUByte()
         elem1 = (elem1 / other.elem1).toUByte()
         elem2 = (elem2 / other.elem2).toUByte()
         elem3 = (elem3 / other.elem3).toUByte()
     }
 
-    operator fun div(scalar : UInt) : RGBA {
-        return RGBA(elem0 / scalar,elem1 / scalar,elem2 / scalar,elem3 / scalar)
+    operator fun div(scalar: UInt): RGBA {
+        return RGBA(elem0 / scalar, elem1 / scalar, elem2 / scalar, elem3 / scalar)
     }
 
-    operator fun divAssign(scalar : UInt) {
+    operator fun divAssign(scalar: UInt) {
         elem0 = (elem0 / scalar).toUByte()
         elem1 = (elem1 / scalar).toUByte()
         elem2 = (elem2 / scalar).toUByte()
@@ -2792,9 +2987,8 @@ data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()
     }
 
 
-
-    operator fun get(i: Int) : UByte {
-        return when(i) {
+    operator fun get(i: Int): UByte {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -2804,7 +2998,7 @@ data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()
     }
 
     operator fun set(i: Int, t: UByte) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -2813,11 +3007,11 @@ data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()
         }
     }
 
-    operator fun get(axis: Axis) : UByte {
+    operator fun get(axis: Axis): UByte {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : UByte {
+    operator fun get(axis: Axis2D): UByte {
         return get(axis.ordinal)
     }
 
@@ -2825,38 +3019,55 @@ data class RGBA(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte()
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : UByte) {
+    operator fun get(axis: Axis2D, t: UByte) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: RGBA) : UInt = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
+    fun dot(other: RGBA): UInt = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
 
-    fun magnitude2() : UInt = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
+    fun magnitude2(): UInt = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
 
 
+    fun toFloat(): Vec4f {
+        return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat())
+    }
 
-    fun toFloat() : Vec4f { return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat()) }
+    override fun toString(): String {
+        return "RGBA($elem0,$elem1,$elem2,$elem3)"
+    }
 
-    override fun toString(): String { return "RGBA($elem0,$elem1,$elem2,$elem3)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec4ub
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2 && elem3 == other.elem3
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        result = result * 31 + elem3.hashCode()
+        return result
+    }
 }
 
 
-data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte(), var elem2 : UByte = 0.toUByte(), var elem3 : UByte = 0.toUByte()) {
-    constructor(arg0 : UInt, arg1 : UInt, arg2 : UInt, arg3 : UInt) : this(arg0.toUByte(), arg1.toUByte(), arg2.toUByte(), arg3.toUByte()) {}
+class Vec4ub(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var elem2: UByte = 0.toUByte(), var elem3: UByte = 0.toUByte()) {
+    constructor(arg0: UInt, arg1: UInt, arg2: UInt, arg3: UInt) : this(arg0.toUByte(), arg1.toUByte(), arg2.toUByte(), arg3.toUByte()) {}
 
 
-    operator fun invoke(arg0 : UByte, arg1 : UByte, arg2 : UByte, arg3 : UByte) {
+    operator fun invoke(arg0: UByte, arg1: UByte, arg2: UByte, arg3: UByte) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
         elem3 = arg3
     }
-
 
 
     inline var x: UByte
@@ -2915,23 +3126,22 @@ data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
         }
 
 
-
-    operator fun plus(other : Vec4ub) : Vec4ub {
-        return Vec4ub(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2,elem3 + other.elem3)
+    operator fun plus(other: Vec4ub): Vec4ub {
+        return Vec4ub(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2, elem3 + other.elem3)
     }
 
-    operator fun plusAssign(other : Vec4ub) {
+    operator fun plusAssign(other: Vec4ub) {
         elem0 = (elem0 + other.elem0).toUByte()
         elem1 = (elem1 + other.elem1).toUByte()
         elem2 = (elem2 + other.elem2).toUByte()
         elem3 = (elem3 + other.elem3).toUByte()
     }
 
-    operator fun plus(scalar : UInt) : Vec4ub {
-        return Vec4ub(elem0 + scalar,elem1 + scalar,elem2 + scalar,elem3 + scalar)
+    operator fun plus(scalar: UInt): Vec4ub {
+        return Vec4ub(elem0 + scalar, elem1 + scalar, elem2 + scalar, elem3 + scalar)
     }
 
-    operator fun plusAssign(scalar : UInt) {
+    operator fun plusAssign(scalar: UInt) {
         elem0 = (elem0 + scalar).toUByte()
         elem1 = (elem1 + scalar).toUByte()
         elem2 = (elem2 + scalar).toUByte()
@@ -2939,22 +3149,22 @@ data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
     }
 
 
-    operator fun minus(other : Vec4ub) : Vec4ub {
-        return Vec4ub(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2,elem3 - other.elem3)
+    operator fun minus(other: Vec4ub): Vec4ub {
+        return Vec4ub(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2, elem3 - other.elem3)
     }
 
-    operator fun minusAssign(other : Vec4ub) {
+    operator fun minusAssign(other: Vec4ub) {
         elem0 = (elem0 - other.elem0).toUByte()
         elem1 = (elem1 - other.elem1).toUByte()
         elem2 = (elem2 - other.elem2).toUByte()
         elem3 = (elem3 - other.elem3).toUByte()
     }
 
-    operator fun minus(scalar : UInt) : Vec4ub {
-        return Vec4ub(elem0 - scalar,elem1 - scalar,elem2 - scalar,elem3 - scalar)
+    operator fun minus(scalar: UInt): Vec4ub {
+        return Vec4ub(elem0 - scalar, elem1 - scalar, elem2 - scalar, elem3 - scalar)
     }
 
-    operator fun minusAssign(scalar : UInt) {
+    operator fun minusAssign(scalar: UInt) {
         elem0 = (elem0 - scalar).toUByte()
         elem1 = (elem1 - scalar).toUByte()
         elem2 = (elem2 - scalar).toUByte()
@@ -2962,22 +3172,22 @@ data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
     }
 
 
-    operator fun times(other : Vec4ub) : Vec4ub {
-        return Vec4ub(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2,elem3 * other.elem3)
+    operator fun times(other: Vec4ub): Vec4ub {
+        return Vec4ub(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2, elem3 * other.elem3)
     }
 
-    operator fun timesAssign(other : Vec4ub) {
+    operator fun timesAssign(other: Vec4ub) {
         elem0 = (elem0 * other.elem0).toUByte()
         elem1 = (elem1 * other.elem1).toUByte()
         elem2 = (elem2 * other.elem2).toUByte()
         elem3 = (elem3 * other.elem3).toUByte()
     }
 
-    operator fun times(scalar : UInt) : Vec4ub {
-        return Vec4ub(elem0 * scalar,elem1 * scalar,elem2 * scalar,elem3 * scalar)
+    operator fun times(scalar: UInt): Vec4ub {
+        return Vec4ub(elem0 * scalar, elem1 * scalar, elem2 * scalar, elem3 * scalar)
     }
 
-    operator fun timesAssign(scalar : UInt) {
+    operator fun timesAssign(scalar: UInt) {
         elem0 = (elem0 * scalar).toUByte()
         elem1 = (elem1 * scalar).toUByte()
         elem2 = (elem2 * scalar).toUByte()
@@ -2985,22 +3195,22 @@ data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
     }
 
 
-    operator fun div(other : Vec4ub) : Vec4ub {
-        return Vec4ub(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2,elem3 / other.elem3)
+    operator fun div(other: Vec4ub): Vec4ub {
+        return Vec4ub(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2, elem3 / other.elem3)
     }
 
-    operator fun divAssign(other : Vec4ub) {
+    operator fun divAssign(other: Vec4ub) {
         elem0 = (elem0 / other.elem0).toUByte()
         elem1 = (elem1 / other.elem1).toUByte()
         elem2 = (elem2 / other.elem2).toUByte()
         elem3 = (elem3 / other.elem3).toUByte()
     }
 
-    operator fun div(scalar : UInt) : Vec4ub {
-        return Vec4ub(elem0 / scalar,elem1 / scalar,elem2 / scalar,elem3 / scalar)
+    operator fun div(scalar: UInt): Vec4ub {
+        return Vec4ub(elem0 / scalar, elem1 / scalar, elem2 / scalar, elem3 / scalar)
     }
 
-    operator fun divAssign(scalar : UInt) {
+    operator fun divAssign(scalar: UInt) {
         elem0 = (elem0 / scalar).toUByte()
         elem1 = (elem1 / scalar).toUByte()
         elem2 = (elem2 / scalar).toUByte()
@@ -3008,9 +3218,8 @@ data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
     }
 
 
-
-    operator fun get(i: Int) : UByte {
-        return when(i) {
+    operator fun get(i: Int): UByte {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -3020,7 +3229,7 @@ data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
     }
 
     operator fun set(i: Int, t: UByte) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -3029,11 +3238,11 @@ data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
         }
     }
 
-    operator fun get(axis: Axis) : UByte {
+    operator fun get(axis: Axis): UByte {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : UByte {
+    operator fun get(axis: Axis2D): UByte {
         return get(axis.ordinal)
     }
 
@@ -3041,36 +3250,52 @@ data class Vec4ub(var elem0 : UByte = 0.toUByte(), var elem1 : UByte = 0.toUByte
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : UByte) {
+    operator fun get(axis: Axis2D, t: UByte) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec4ub) : UInt = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
+    fun dot(other: Vec4ub): UInt = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
 
-    fun magnitude2() : UInt = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
+    fun magnitude2(): UInt = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
 
-    fun magnitude() : Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
-
-
+    fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
 
 
+    fun toFloat(): Vec4f {
+        return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat())
+    }
 
-    fun toFloat() : Vec4f { return Vec4f(elem0.toFloat(), elem1.toFloat(), elem2.toFloat(), elem3.toFloat()) }
+    override fun toString(): String {
+        return "Vec4ub($elem0,$elem1,$elem2,$elem3)"
+    }
 
-    override fun toString(): String { return "Vec4ub($elem0,$elem1,$elem2,$elem3)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec4ub
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2 && elem3 == other.elem3
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        result = result * 31 + elem3.hashCode()
+        return result
+    }
 }
 
 
-data class Vec2d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDouble()) {
+class Vec2d(var elem0: Double = 0.toDouble(), var elem1: Double = 0.toDouble()) {
 
 
-
-    operator fun invoke(arg0 : Double, arg1 : Double) {
+    operator fun invoke(arg0: Double, arg1: Double) {
         elem0 = arg0
         elem1 = arg1
     }
-
 
 
     inline var x: Double
@@ -3087,86 +3312,84 @@ data class Vec2d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
         }
 
 
-
-    operator fun plus(other : Vec2d) : Vec2d {
-        return Vec2d(elem0 + other.elem0,elem1 + other.elem1)
+    operator fun plus(other: Vec2d): Vec2d {
+        return Vec2d(elem0 + other.elem0, elem1 + other.elem1)
     }
 
-    operator fun plusAssign(other : Vec2d) {
+    operator fun plusAssign(other: Vec2d) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
     }
 
-    operator fun plus(scalar : Double) : Vec2d {
-        return Vec2d(elem0 + scalar,elem1 + scalar)
+    operator fun plus(scalar: Double): Vec2d {
+        return Vec2d(elem0 + scalar, elem1 + scalar)
     }
 
-    operator fun plusAssign(scalar : Double) {
+    operator fun plusAssign(scalar: Double) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
     }
 
 
-    operator fun minus(other : Vec2d) : Vec2d {
-        return Vec2d(elem0 - other.elem0,elem1 - other.elem1)
+    operator fun minus(other: Vec2d): Vec2d {
+        return Vec2d(elem0 - other.elem0, elem1 - other.elem1)
     }
 
-    operator fun minusAssign(other : Vec2d) {
+    operator fun minusAssign(other: Vec2d) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
     }
 
-    operator fun minus(scalar : Double) : Vec2d {
-        return Vec2d(elem0 - scalar,elem1 - scalar)
+    operator fun minus(scalar: Double): Vec2d {
+        return Vec2d(elem0 - scalar, elem1 - scalar)
     }
 
-    operator fun minusAssign(scalar : Double) {
+    operator fun minusAssign(scalar: Double) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
     }
 
 
-    operator fun times(other : Vec2d) : Vec2d {
-        return Vec2d(elem0 * other.elem0,elem1 * other.elem1)
+    operator fun times(other: Vec2d): Vec2d {
+        return Vec2d(elem0 * other.elem0, elem1 * other.elem1)
     }
 
-    operator fun timesAssign(other : Vec2d) {
+    operator fun timesAssign(other: Vec2d) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
     }
 
-    operator fun times(scalar : Double) : Vec2d {
-        return Vec2d(elem0 * scalar,elem1 * scalar)
+    operator fun times(scalar: Double): Vec2d {
+        return Vec2d(elem0 * scalar, elem1 * scalar)
     }
 
-    operator fun timesAssign(scalar : Double) {
+    operator fun timesAssign(scalar: Double) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
     }
 
 
-    operator fun div(other : Vec2d) : Vec2d {
-        return Vec2d(elem0 / other.elem0,elem1 / other.elem1)
+    operator fun div(other: Vec2d): Vec2d {
+        return Vec2d(elem0 / other.elem0, elem1 / other.elem1)
     }
 
-    operator fun divAssign(other : Vec2d) {
+    operator fun divAssign(other: Vec2d) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
     }
 
-    operator fun div(scalar : Double) : Vec2d {
-        return Vec2d(elem0 / scalar,elem1 / scalar)
+    operator fun div(scalar: Double): Vec2d {
+        return Vec2d(elem0 / scalar, elem1 / scalar)
     }
 
-    operator fun divAssign(scalar : Double) {
+    operator fun divAssign(scalar: Double) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
     }
 
 
-
-    operator fun get(i: Int) : Double {
-        return when(i) {
+    operator fun get(i: Int): Double {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             else -> error("Attempted to retrieve invalid element from 2 dimension vector")
@@ -3174,18 +3397,18 @@ data class Vec2d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
     operator fun set(i: Int, t: Double) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             else -> error("Attempted to set invalid element from 2 dimension vector")
         }
     }
 
-    operator fun get(axis: Axis) : Double {
+    operator fun get(axis: Axis): Double {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Double {
+    operator fun get(axis: Axis2D): Double {
         return get(axis.ordinal)
     }
 
@@ -3193,16 +3416,16 @@ data class Vec2d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Double) {
+    operator fun get(axis: Axis2D, t: Double) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec2d) : Double = elem0 * other.elem0 + elem1 * other.elem1
+    fun dot(other: Vec2d): Double = elem0 * other.elem0 + elem1 * other.elem1
 
-    fun magnitude2() : Double = elem0 * elem0 + elem1 * elem1
+    fun magnitude2(): Double = elem0 * elem0 + elem1 * elem1
 
-    fun magnitude() : Double = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toDouble())
+    fun magnitude(): Double = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1).toDouble())
 
 
     fun normalize() {
@@ -3213,31 +3436,44 @@ data class Vec2d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
 
     fun normalizeSafe() {
         val mag2 = magnitude2()
-        if (mag2 == 0.0) { return }
+        if (mag2 == 0.0) {
+            return
+        }
         val mag = kotlin.math.sqrt(mag2)
         elem0 = elem0 / mag
         elem1 = elem1 / mag
     }
 
 
+    override fun toString(): String {
+        return "Vec2d($elem0,$elem1)"
+    }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
+        other as Vec2d
 
+        return elem0 == other.elem0 && elem1 == other.elem1
+    }
 
-    override fun toString(): String { return "Vec2d($elem0,$elem1)" }
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        return result
+    }
 }
 
 
-data class Vec3d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDouble(), var elem2 : Double = 0.toDouble()) {
+class Vec3d(var elem0: Double = 0.toDouble(), var elem1: Double = 0.toDouble(), var elem2: Double = 0.toDouble()) {
 
 
-
-    operator fun invoke(arg0 : Double, arg1 : Double, arg2 : Double) {
+    operator fun invoke(arg0: Double, arg1: Double, arg2: Double) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
     }
-
 
 
     inline var x: Double
@@ -3282,94 +3518,92 @@ data class Vec3d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
         }
 
 
-
-    operator fun plus(other : Vec3d) : Vec3d {
-        return Vec3d(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2)
+    operator fun plus(other: Vec3d): Vec3d {
+        return Vec3d(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2)
     }
 
-    operator fun plusAssign(other : Vec3d) {
+    operator fun plusAssign(other: Vec3d) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
         elem2 = (elem2 + other.elem2)
     }
 
-    operator fun plus(scalar : Double) : Vec3d {
-        return Vec3d(elem0 + scalar,elem1 + scalar,elem2 + scalar)
+    operator fun plus(scalar: Double): Vec3d {
+        return Vec3d(elem0 + scalar, elem1 + scalar, elem2 + scalar)
     }
 
-    operator fun plusAssign(scalar : Double) {
+    operator fun plusAssign(scalar: Double) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
         elem2 = (elem2 + scalar)
     }
 
 
-    operator fun minus(other : Vec3d) : Vec3d {
-        return Vec3d(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2)
+    operator fun minus(other: Vec3d): Vec3d {
+        return Vec3d(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2)
     }
 
-    operator fun minusAssign(other : Vec3d) {
+    operator fun minusAssign(other: Vec3d) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
         elem2 = (elem2 - other.elem2)
     }
 
-    operator fun minus(scalar : Double) : Vec3d {
-        return Vec3d(elem0 - scalar,elem1 - scalar,elem2 - scalar)
+    operator fun minus(scalar: Double): Vec3d {
+        return Vec3d(elem0 - scalar, elem1 - scalar, elem2 - scalar)
     }
 
-    operator fun minusAssign(scalar : Double) {
+    operator fun minusAssign(scalar: Double) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
         elem2 = (elem2 - scalar)
     }
 
 
-    operator fun times(other : Vec3d) : Vec3d {
-        return Vec3d(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2)
+    operator fun times(other: Vec3d): Vec3d {
+        return Vec3d(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2)
     }
 
-    operator fun timesAssign(other : Vec3d) {
+    operator fun timesAssign(other: Vec3d) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
         elem2 = (elem2 * other.elem2)
     }
 
-    operator fun times(scalar : Double) : Vec3d {
-        return Vec3d(elem0 * scalar,elem1 * scalar,elem2 * scalar)
+    operator fun times(scalar: Double): Vec3d {
+        return Vec3d(elem0 * scalar, elem1 * scalar, elem2 * scalar)
     }
 
-    operator fun timesAssign(scalar : Double) {
+    operator fun timesAssign(scalar: Double) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
         elem2 = (elem2 * scalar)
     }
 
 
-    operator fun div(other : Vec3d) : Vec3d {
-        return Vec3d(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2)
+    operator fun div(other: Vec3d): Vec3d {
+        return Vec3d(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2)
     }
 
-    operator fun divAssign(other : Vec3d) {
+    operator fun divAssign(other: Vec3d) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
         elem2 = (elem2 / other.elem2)
     }
 
-    operator fun div(scalar : Double) : Vec3d {
-        return Vec3d(elem0 / scalar,elem1 / scalar,elem2 / scalar)
+    operator fun div(scalar: Double): Vec3d {
+        return Vec3d(elem0 / scalar, elem1 / scalar, elem2 / scalar)
     }
 
-    operator fun divAssign(scalar : Double) {
+    operator fun divAssign(scalar: Double) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
         elem2 = (elem2 / scalar)
     }
 
 
-
-    operator fun get(i: Int) : Double {
-        return when(i) {
+    operator fun get(i: Int): Double {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -3378,7 +3612,7 @@ data class Vec3d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
     operator fun set(i: Int, t: Double) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -3386,11 +3620,11 @@ data class Vec3d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
         }
     }
 
-    operator fun get(axis: Axis) : Double {
+    operator fun get(axis: Axis): Double {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Double {
+    operator fun get(axis: Axis2D): Double {
         return get(axis.ordinal)
     }
 
@@ -3398,16 +3632,16 @@ data class Vec3d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Double) {
+    operator fun get(axis: Axis2D, t: Double) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec3d) : Double = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
+    fun dot(other: Vec3d): Double = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2
 
-    fun magnitude2() : Double = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
+    fun magnitude2(): Double = elem0 * elem0 + elem1 * elem1 + elem2 * elem2
 
-    fun magnitude() : Double = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toDouble())
+    fun magnitude(): Double = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2).toDouble())
 
 
     fun normalize() {
@@ -3419,7 +3653,9 @@ data class Vec3d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
 
     fun normalizeSafe() {
         val mag2 = magnitude2()
-        if (mag2 == 0.0) { return }
+        if (mag2 == 0.0) {
+            return
+        }
         val mag = kotlin.math.sqrt(mag2)
         elem0 = elem0 / mag
         elem1 = elem1 / mag
@@ -3427,25 +3663,40 @@ data class Vec3d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
 
-    fun cross(other : Vec3d) : Vec3d = Vec3d(elem1*other.elem2-other.elem1*elem2,elem2*other.elem0-other.elem2*elem0,elem0*other.elem1-other.elem0*elem1)
+    fun cross(other: Vec3d): Vec3d = Vec3d(elem1 * other.elem2 - other.elem1 * elem2, elem2 * other.elem0 - other.elem2 * elem0, elem0 * other.elem1 - other.elem0 * elem1)
 
 
+    override fun toString(): String {
+        return "Vec3d($elem0,$elem1,$elem2)"
+    }
 
-    override fun toString(): String { return "Vec3d($elem0,$elem1,$elem2)" }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Vec3d
+
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2
+    }
+
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        return result
+    }
 }
 
 
-data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDouble(), var elem2 : Double = 0.toDouble(), var elem3 : Double = 0.toDouble()) {
+class Vec4d(var elem0: Double = 0.toDouble(), var elem1: Double = 0.toDouble(), var elem2: Double = 0.toDouble(), var elem3: Double = 0.toDouble()) {
 
 
-
-    operator fun invoke(arg0 : Double, arg1 : Double, arg2 : Double, arg3 : Double) {
+    operator fun invoke(arg0: Double, arg1: Double, arg2: Double, arg3: Double) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
         elem3 = arg3
     }
-
 
 
     inline var x: Double
@@ -3504,23 +3755,22 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
         }
 
 
-
-    operator fun plus(other : Vec4d) : Vec4d {
-        return Vec4d(elem0 + other.elem0,elem1 + other.elem1,elem2 + other.elem2,elem3 + other.elem3)
+    operator fun plus(other: Vec4d): Vec4d {
+        return Vec4d(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2, elem3 + other.elem3)
     }
 
-    operator fun plusAssign(other : Vec4d) {
+    operator fun plusAssign(other: Vec4d) {
         elem0 = (elem0 + other.elem0)
         elem1 = (elem1 + other.elem1)
         elem2 = (elem2 + other.elem2)
         elem3 = (elem3 + other.elem3)
     }
 
-    operator fun plus(scalar : Double) : Vec4d {
-        return Vec4d(elem0 + scalar,elem1 + scalar,elem2 + scalar,elem3 + scalar)
+    operator fun plus(scalar: Double): Vec4d {
+        return Vec4d(elem0 + scalar, elem1 + scalar, elem2 + scalar, elem3 + scalar)
     }
 
-    operator fun plusAssign(scalar : Double) {
+    operator fun plusAssign(scalar: Double) {
         elem0 = (elem0 + scalar)
         elem1 = (elem1 + scalar)
         elem2 = (elem2 + scalar)
@@ -3528,22 +3778,22 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
 
-    operator fun minus(other : Vec4d) : Vec4d {
-        return Vec4d(elem0 - other.elem0,elem1 - other.elem1,elem2 - other.elem2,elem3 - other.elem3)
+    operator fun minus(other: Vec4d): Vec4d {
+        return Vec4d(elem0 - other.elem0, elem1 - other.elem1, elem2 - other.elem2, elem3 - other.elem3)
     }
 
-    operator fun minusAssign(other : Vec4d) {
+    operator fun minusAssign(other: Vec4d) {
         elem0 = (elem0 - other.elem0)
         elem1 = (elem1 - other.elem1)
         elem2 = (elem2 - other.elem2)
         elem3 = (elem3 - other.elem3)
     }
 
-    operator fun minus(scalar : Double) : Vec4d {
-        return Vec4d(elem0 - scalar,elem1 - scalar,elem2 - scalar,elem3 - scalar)
+    operator fun minus(scalar: Double): Vec4d {
+        return Vec4d(elem0 - scalar, elem1 - scalar, elem2 - scalar, elem3 - scalar)
     }
 
-    operator fun minusAssign(scalar : Double) {
+    operator fun minusAssign(scalar: Double) {
         elem0 = (elem0 - scalar)
         elem1 = (elem1 - scalar)
         elem2 = (elem2 - scalar)
@@ -3551,22 +3801,22 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
 
-    operator fun times(other : Vec4d) : Vec4d {
-        return Vec4d(elem0 * other.elem0,elem1 * other.elem1,elem2 * other.elem2,elem3 * other.elem3)
+    operator fun times(other: Vec4d): Vec4d {
+        return Vec4d(elem0 * other.elem0, elem1 * other.elem1, elem2 * other.elem2, elem3 * other.elem3)
     }
 
-    operator fun timesAssign(other : Vec4d) {
+    operator fun timesAssign(other: Vec4d) {
         elem0 = (elem0 * other.elem0)
         elem1 = (elem1 * other.elem1)
         elem2 = (elem2 * other.elem2)
         elem3 = (elem3 * other.elem3)
     }
 
-    operator fun times(scalar : Double) : Vec4d {
-        return Vec4d(elem0 * scalar,elem1 * scalar,elem2 * scalar,elem3 * scalar)
+    operator fun times(scalar: Double): Vec4d {
+        return Vec4d(elem0 * scalar, elem1 * scalar, elem2 * scalar, elem3 * scalar)
     }
 
-    operator fun timesAssign(scalar : Double) {
+    operator fun timesAssign(scalar: Double) {
         elem0 = (elem0 * scalar)
         elem1 = (elem1 * scalar)
         elem2 = (elem2 * scalar)
@@ -3574,22 +3824,22 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
 
-    operator fun div(other : Vec4d) : Vec4d {
-        return Vec4d(elem0 / other.elem0,elem1 / other.elem1,elem2 / other.elem2,elem3 / other.elem3)
+    operator fun div(other: Vec4d): Vec4d {
+        return Vec4d(elem0 / other.elem0, elem1 / other.elem1, elem2 / other.elem2, elem3 / other.elem3)
     }
 
-    operator fun divAssign(other : Vec4d) {
+    operator fun divAssign(other: Vec4d) {
         elem0 = (elem0 / other.elem0)
         elem1 = (elem1 / other.elem1)
         elem2 = (elem2 / other.elem2)
         elem3 = (elem3 / other.elem3)
     }
 
-    operator fun div(scalar : Double) : Vec4d {
-        return Vec4d(elem0 / scalar,elem1 / scalar,elem2 / scalar,elem3 / scalar)
+    operator fun div(scalar: Double): Vec4d {
+        return Vec4d(elem0 / scalar, elem1 / scalar, elem2 / scalar, elem3 / scalar)
     }
 
-    operator fun divAssign(scalar : Double) {
+    operator fun divAssign(scalar: Double) {
         elem0 = (elem0 / scalar)
         elem1 = (elem1 / scalar)
         elem2 = (elem2 / scalar)
@@ -3597,9 +3847,8 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
 
-
-    operator fun get(i: Int) : Double {
-        return when(i) {
+    operator fun get(i: Int): Double {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -3609,7 +3858,7 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
     operator fun set(i: Int, t: Double) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -3618,11 +3867,11 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
         }
     }
 
-    operator fun get(axis: Axis) : Double {
+    operator fun get(axis: Axis): Double {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : Double {
+    operator fun get(axis: Axis2D): Double {
         return get(axis.ordinal)
     }
 
@@ -3630,16 +3879,16 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
         return set(axis.ordinal, t)
     }
 
-    operator fun get(axis: Axis2D, t : Double) {
+    operator fun get(axis: Axis2D, t: Double) {
         return set(axis.ordinal, t)
     }
 
 
-    fun dot(other: Vec4d) : Double = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
+    fun dot(other: Vec4d): Double = elem0 * other.elem0 + elem1 * other.elem1 + elem2 * other.elem2 + elem3 * other.elem3
 
-    fun magnitude2() : Double = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
+    fun magnitude2(): Double = elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3
 
-    fun magnitude() : Double = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toDouble())
+    fun magnitude(): Double = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toDouble())
 
 
     fun normalize() {
@@ -3652,7 +3901,9 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
 
     fun normalizeSafe() {
         val mag2 = magnitude2()
-        if (mag2 == 0.0) { return }
+        if (mag2 == 0.0) {
+            return
+        }
         val mag = kotlin.math.sqrt(mag2)
         elem0 = elem0 / mag
         elem1 = elem1 / mag
@@ -3661,15 +3912,30 @@ data class Vec4d(var elem0 : Double = 0.toDouble(), var elem1 : Double = 0.toDou
     }
 
 
+    override fun toString(): String {
+        return "Vec4d($elem0,$elem1,$elem2,$elem3)"
+    }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
+        other as Vec4d
 
+        return elem0 == other.elem0 && elem1 == other.elem1 && elem2 == other.elem2 && elem3 == other.elem3
+    }
 
-    override fun toString(): String { return "Vec4d($elem0,$elem1,$elem2,$elem3)" }
+    override fun hashCode(): Int {
+        var result = elem0.hashCode()
+        result = result * 31 + elem1.hashCode()
+        result = result * 31 + elem2.hashCode()
+        result = result * 31 + elem3.hashCode()
+        return result
+    }
 }
 
 
-data class Vec2<T> (var elem0 : T, var elem1 : T) {
+data class Vec2<T>(var elem0: T, var elem1: T) {
 
     inline var x: T
         get() = elem0
@@ -3685,9 +3951,8 @@ data class Vec2<T> (var elem0 : T, var elem1 : T) {
         }
 
 
-
-    operator fun get(i: Int) : T {
-        return when(i) {
+    operator fun get(i: Int): T {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             else -> error("Attempted to retrieve invalid element from 2 dimension vector")
@@ -3695,46 +3960,47 @@ data class Vec2<T> (var elem0 : T, var elem1 : T) {
     }
 
     operator fun set(i: Int, t: T) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             else -> error("Attempted to set invalid element from 2 dimension vector")
         }
     }
 
-    operator fun get(axis: Axis) : T {
+    operator fun get(axis: Axis): T {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : T {
+    operator fun get(axis: Axis2D): T {
         return get(axis.ordinal)
     }
 
-    operator fun set(axis: Axis, t : T) {
+    operator fun set(axis: Axis, t: T) {
         return set(axis.ordinal, t)
     }
 
-    operator fun set(axis: Axis2D, t : T) {
+    operator fun set(axis: Axis2D, t: T) {
         return set(axis.ordinal, t)
     }
 
 
-
-    operator fun invoke(arg0 : T, arg1 : T) {
+    operator fun invoke(arg0: T, arg1: T) {
         elem0 = arg0
         elem1 = arg1
     }
 
-    fun set(arg0 : T, arg1 : T) {
+    fun set(arg0: T, arg1: T) {
         elem0 = arg0
         elem1 = arg1
     }
 
 
-    override fun toString(): String { return "Vec2($elem0,$elem1)" }
+    override fun toString(): String {
+        return "Vec2($elem0,$elem1)"
+    }
 }
 
-data class Vec3<T> (var elem0 : T, var elem1 : T, var elem2 : T) {
+data class Vec3<T>(var elem0: T, var elem1: T, var elem2: T) {
 
     inline var x: T
         get() = elem0
@@ -3778,9 +4044,8 @@ data class Vec3<T> (var elem0 : T, var elem1 : T, var elem2 : T) {
         }
 
 
-
-    operator fun get(i: Int) : T {
-        return when(i) {
+    operator fun get(i: Int): T {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -3789,7 +4054,7 @@ data class Vec3<T> (var elem0 : T, var elem1 : T, var elem2 : T) {
     }
 
     operator fun set(i: Int, t: T) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -3797,41 +4062,42 @@ data class Vec3<T> (var elem0 : T, var elem1 : T, var elem2 : T) {
         }
     }
 
-    operator fun get(axis: Axis) : T {
+    operator fun get(axis: Axis): T {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : T {
+    operator fun get(axis: Axis2D): T {
         return get(axis.ordinal)
     }
 
-    operator fun set(axis: Axis, t : T) {
+    operator fun set(axis: Axis, t: T) {
         return set(axis.ordinal, t)
     }
 
-    operator fun set(axis: Axis2D, t : T) {
+    operator fun set(axis: Axis2D, t: T) {
         return set(axis.ordinal, t)
     }
 
 
-
-    operator fun invoke(arg0 : T, arg1 : T, arg2 : T) {
+    operator fun invoke(arg0: T, arg1: T, arg2: T) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
     }
 
-    fun set(arg0 : T, arg1 : T, arg2 : T) {
+    fun set(arg0: T, arg1: T, arg2: T) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
     }
 
 
-    override fun toString(): String { return "Vec3($elem0,$elem1,$elem2)" }
+    override fun toString(): String {
+        return "Vec3($elem0,$elem1,$elem2)"
+    }
 }
 
-data class Vec4<T> (var elem0 : T, var elem1 : T, var elem2 : T, var elem3 : T) {
+data class Vec4<T>(var elem0: T, var elem1: T, var elem2: T, var elem3: T) {
 
     inline var x: T
         get() = elem0
@@ -3889,9 +4155,8 @@ data class Vec4<T> (var elem0 : T, var elem1 : T, var elem2 : T, var elem3 : T) 
         }
 
 
-
-    operator fun get(i: Int) : T {
-        return when(i) {
+    operator fun get(i: Int): T {
+        return when (i) {
             0 -> elem0
             1 -> elem1
             2 -> elem2
@@ -3901,7 +4166,7 @@ data class Vec4<T> (var elem0 : T, var elem1 : T, var elem2 : T, var elem3 : T) 
     }
 
     operator fun set(i: Int, t: T) {
-        when(i) {
+        when (i) {
             0 -> elem0 = t
             1 -> elem1 = t
             2 -> elem2 = t
@@ -3910,32 +4175,31 @@ data class Vec4<T> (var elem0 : T, var elem1 : T, var elem2 : T, var elem3 : T) 
         }
     }
 
-    operator fun get(axis: Axis) : T {
+    operator fun get(axis: Axis): T {
         return get(axis.ordinal)
     }
 
-    operator fun get(axis: Axis2D) : T {
+    operator fun get(axis: Axis2D): T {
         return get(axis.ordinal)
     }
 
-    operator fun set(axis: Axis, t : T) {
+    operator fun set(axis: Axis, t: T) {
         return set(axis.ordinal, t)
     }
 
-    operator fun set(axis: Axis2D, t : T) {
+    operator fun set(axis: Axis2D, t: T) {
         return set(axis.ordinal, t)
     }
 
 
-
-    operator fun invoke(arg0 : T, arg1 : T, arg2 : T, arg3 : T) {
+    operator fun invoke(arg0: T, arg1: T, arg2: T, arg3: T) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
         elem3 = arg3
     }
 
-    fun set(arg0 : T, arg1 : T, arg2 : T, arg3 : T) {
+    fun set(arg0: T, arg1: T, arg2: T, arg3: T) {
         elem0 = arg0
         elem1 = arg1
         elem2 = arg2
@@ -3943,5 +4207,7 @@ data class Vec4<T> (var elem0 : T, var elem1 : T, var elem2 : T, var elem3 : T) 
     }
 
 
-    override fun toString(): String { return "Vec4($elem0,$elem1,$elem2,$elem3)" }
+    override fun toString(): String {
+        return "Vec4($elem0,$elem1,$elem2,$elem3)"
+    }
 }

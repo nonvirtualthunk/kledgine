@@ -279,7 +279,7 @@ object Noto {
         val trace = Thread.currentThread().stackTrace
         val stack = trace.sliceArray(2 until trace.size)
         errors.add(Error(stack, toAttributes(attributes)))
-        err(message)
+        err("$message\n\t$attributes")
     }
 
     fun info(str: String) {

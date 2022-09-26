@@ -1,5 +1,13 @@
+@file:OptIn(ExperimentalContracts::class)
+
 package arx.core
 
+import com.typesafe.config.*
+import io.github.config4k.extract
+import java.util.concurrent.ThreadLocalRandom
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 
 enum class Axis {
@@ -48,6 +56,8 @@ enum class Cardinals2D(val vector: Vec2i) {
 }
 
 val UnitSquare2D = arrayOf(Vec2f(0.0f, 0.0f), Vec2f(1.0f, 0.0f), Vec2f(1.0f, 1.0f), Vec2f(0.0f, 1.0f))
+val UnitSquare3D = arrayOf(Vec3f(0.0f, 0.0f, 0.0f), Vec3f(1.0f, 0.0f, 0.0f), Vec3f(1.0f, 1.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f))
+val CenteredUnitSquare3D = arrayOf(Vec3f(-0.5f, -0.5f, 0.0f), Vec3f(0.5f, -0.5f, 0.0f), Vec3f(0.5f, 0.5f, 0.0f), Vec3f(-0.5f, 0.5f, 0.0f))
 val UnitSquare2Di = arrayOf(Vec2i(0, 0), Vec2i(1, 0), Vec2i(1, 1), Vec2i(0, 1))
 
 /**
@@ -58,4 +68,61 @@ val UnitSquare2Di = arrayOf(Vec2i(0, 0), Vec2i(1, 0), Vec2i(1, 1), Vec2i(0, 1))
 fun <T> MutableList<T>.swapAndPop(i: Int) {
     this[i] = this[size - 1]
     this.removeAt(size-1)
+}
+
+
+
+sealed interface GuardLet<U> {
+    infix fun orElse(block : () -> U) : U
+}
+
+
+@JvmInline
+value class ValueGuardLet(val resultValue : Any?) : GuardLet<Any?> {
+    override fun orElse(block: () -> Any?): Any? {
+        return resultValue
+    }
+}
+
+object NullGuardLet : GuardLet<Any> {
+    override fun orElse(block: () -> Any): Any {
+        return block()
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+inline infix fun <T, U> T?.ifLet(block : (T) -> U) : GuardLet<U> {
+    contract {
+        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
+    }
+    return if (this == null) {
+        NullGuardLet as GuardLet<U>
+    } else {
+        ValueGuardLet(block(this) as Any?) as GuardLet<U>
+    }
+}
+
+inline infix fun <T> T?.ifPresent(block : (T) -> Unit) {
+    contract {
+        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
+    }
+    if (this != null) {
+        block(this)
+    }
+}
+
+fun main() {
+
+    var x : Int? = null
+    if (ThreadLocalRandom.current().nextBoolean()) {
+        x = 3
+    }
+
+    val y = x ifLet {
+        it * 3
+    } orElse {
+        1
+    }
+
+    println("$x -> $y")
 }

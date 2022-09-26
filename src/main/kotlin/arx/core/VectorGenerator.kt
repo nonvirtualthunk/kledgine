@@ -201,8 +201,27 @@ fun main() {
                 val separatedElems = (0 until arity).map { "\$elem$it" }.joinToString(",")
                 val toString = """override fun toString(): String { return "$typeName($separatedElems)" }"""
 
+                val piecewiseEquality = (0 until arity).map { "elem$it == other.elem$it" }.joinToString(" && ")
+                val equality = """override fun equals(other : Any?) : Boolean {
+                    |    if (this === other) return true
+                    |    if (javaClass != other?.javaClass) return false
+                    |
+                    |    other as $baseTypeName
+                    |    
+                    |    return $piecewiseEquality
+                    |}
+                """.trimMargin()
+
+                val piecewiseHashCode = (1 until arity).map { "result = result * 31 + elem$it.hashCode()" }.joinToString("\n")
+                val hashCode = """override fun hashCode() : Int {
+                    |    var result = elem0.hashCode()
+                    |    $piecewiseHashCode
+                    |    return result
+                    |}
+                """.trimMargin()
+
                 classString += """
-    data class $typeName($decl) {
+    open class $typeName($decl) {
         $extraConstructors
     
         $invoke
@@ -226,6 +245,10 @@ fun main() {
         $toFloatConverter
         
         $toString
+        
+        $equality
+        
+        $hashCode
     }
                     
                 """

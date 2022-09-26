@@ -153,7 +153,7 @@ class Application {
         GL.createCapabilities()
 
         // Set the clear color
-        GL20.glClearColor(1.0f, 0.0f, 0.0f, 0.0f)
+        GL20.glClearColor(0.5f, 0.5f, 0.5f, 0.0f)
         GL20.glEnable(GL20.GL_BLEND)
         GL20.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
 

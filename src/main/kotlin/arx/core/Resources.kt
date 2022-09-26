@@ -24,7 +24,7 @@ object Resources {
          return typeface(str).withSize(size)
     }
     fun config(str: String) : Config {
-        return configs.getOrPut(str) { ConfigFactory.parseFile(File(assetPath + str)) }
+        return configs.getOrPut(str) { ConfigFactory.parseFile(File(assetPath + str)).resolve() }
     }
 
     fun inputStream(path: String): InputStream = FileInputStream(assetPath + path)

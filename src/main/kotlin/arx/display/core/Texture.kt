@@ -140,8 +140,8 @@ open class Texture(val image: Image, srgbFormat: Boolean = false) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter)
         if (syncedRevision == 0) {
-            println("Syncing texture initially (and writing debug texture to disk)")
-            image.writeToFile("/tmp/texture_block.png")
+//            println("Syncing texture initially (and writing debug texture to disk)")
+//            image.writeToFile("/tmp/texture_block.png")
             GL11.glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, image.width, image.height, 0, dataFormat, GL_UNSIGNED_BYTE, image.data)
         } else {
             GL11.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.width, image.height, dataFormat, GL_UNSIGNED_BYTE, image.data)

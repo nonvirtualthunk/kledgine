@@ -33,7 +33,7 @@ class VertexArrayBuffer(stride: Int, val targetType: Int, val usage: Int, initia
 
     fun reserve (sizeBytes: Int) {
         while (buffer.capacity() < sizeBytes) {
-            MemoryUtil.memRealloc(buffer, buffer.capacity() * 2)
+            buffer = MemoryUtil.memRealloc(buffer, buffer.capacity() * 2)
             buffer.limit(buffer.capacity())
         }
     }
@@ -51,6 +51,7 @@ class VertexArrayBuffer(stride: Int, val targetType: Int, val usage: Int, initia
             buffer.position(0)
             buffer.limit(actualUsedSizeBytes)
             glBufferSubData(targetType, 0, buffer)
+            buffer.limit(buffer.capacity())
             GL.checkError()
         }
         lastSyncedSize = actualUsedSizeBytes
@@ -298,6 +299,7 @@ class VAO<T : VertexDefinition>(val vertexDefinition : T, val indexType : IndexT
         val startvi = vi-4
         if (indexType == IndexType.UnsignedShort) {
             val byteStart = ii * 2
+            indices.reserve(byteStart + 12)
             if (startvi > maxUnsignedShort) { error("Invalid index size for ushort backed indices : $startvi") }
             indices.buffer.putShort(byteStart + 0, startvi.toUShort().toShort())
             indices.buffer.putShort(byteStart + 2, (startvi + 1).toUShort().toShort())
@@ -308,6 +310,7 @@ class VAO<T : VertexDefinition>(val vertexDefinition : T, val indexType : IndexT
             indices.buffer.putShort(byteStart + 10, (startvi + 0).toUShort().toShort())
         } else {
             val byteStart = ii * 4
+            indices.reserve(byteStart + 24)
             indices.buffer.putInt(byteStart + 0, startvi)
             indices.buffer.putInt(byteStart + 4, startvi + 1)
             indices.buffer.putInt(byteStart + 8, startvi + 2)
@@ -381,9 +384,9 @@ class MinimalVertex : VertexDefinition() {
 
     @Attribute(location = 1)
     @Normalize
-    var color: Vec4ub
+    var color: RGBA
         get() {
-            return getInternal(colorOffset, Vec4ub())
+            return getInternal(colorOffset, RGBA())
         }
         set(v) {
             setInternal(colorOffset, v)
