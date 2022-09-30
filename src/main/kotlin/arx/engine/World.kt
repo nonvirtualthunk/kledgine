@@ -1,5 +1,13 @@
 package arx.engine
 
+import arx.core.*
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigRenderOptions
+import io.github.config4k.ClassContainer
+import io.github.config4k.CustomType
+import io.github.config4k.registerCustomType
+import io.github.config4k.toConfig
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
@@ -13,7 +21,49 @@ val DataTypesByClass = ConcurrentHashMap<KClass<*>, DataType<*>>()
 typealias EntityId = Int
 
 @JvmInline
-value class Entity(val id: EntityId)
+value class Entity(val id: EntityId) {
+    companion object {
+        init {
+            registerCustomType(object : CustomType {
+                override fun parse(clazz: ClassContainer, config: Config, name: String): Any? {
+                    TODO("Not yet implemented")
+                }
+
+                override fun testParse(clazz: ClassContainer): Boolean {
+                    return false
+                }
+
+                override fun testToConfig(obj: Any): Boolean {
+                    return obj is Entity
+                }
+
+                override fun toConfig(obj: Any, name: String): Config {
+                    val ent = obj as Entity
+
+                    return ConfigFactory.parseMap(mapOf(name to ent.toString(ConfigRegistration.activeWorld)))
+                }
+            })
+        }
+    }
+
+    override fun toString(): String {
+        return "Entity($id)"
+    }
+
+    fun toString(world: WorldT<EntityData>?) : String {
+        return if (world != null) {
+            with(world) {
+                this@Entity[Identity].ifLet {
+                    it.name ?: "${it.identity}(${this@Entity.id})"
+                }.orElse {
+                    this@Entity.toString()
+                }
+            }
+        } else {
+            this@Entity.toString()
+        }
+    }
+}
 
 interface EntityData {
     fun dataType() : DataType<*>
@@ -33,11 +83,16 @@ open class DataType<T>(val defaultInstance: T, val versioned: Boolean = false, v
     init {
         DataTypesByClass[defaultInstance!!::class] = this
     }
+
+    override fun toString(): String {
+        return defaultInstance!!::class.simpleName!!
+    }
 }
 
 open class DisplayDataType<T>(defaultInst: T, versioned: Boolean) : DataType<T>(defaultInst, versioned)
 
 interface DataContainer {
+    val dataType : DataType<*>
     companion object {
         const val LatestVersion = Long.MAX_VALUE
     }
@@ -48,10 +103,11 @@ interface DataContainer {
     fun resize(size: Int) {}
 
     fun idsWithData() : Iterator<Int>
+    fun remove(e: Int)
 }
 
 @Suppress("UNCHECKED_CAST")
-class UnversionedMapDataContainer : DataContainer {
+class UnversionedMapDataContainer(override val dataType : DataType<*>) : DataContainer {
     private val values : ConcurrentHashMap<Int, Any> = ConcurrentHashMap()
 
     override fun <T> value(e: Int, version: Long): T? {
@@ -72,6 +128,10 @@ class UnversionedMapDataContainer : DataContainer {
 
     override fun idsWithData(): Iterator<Int> {
         return values.keys().iterator()
+    }
+
+    override fun remove(e: Int) {
+        values.remove(e)
     }
 }
 
@@ -98,7 +158,7 @@ class UnversionedMapDataContainer : DataContainer {
 //}
 
 @Suppress("UNCHECKED_CAST")
-class SingleThreadArrayDataContainer(initialSize : Int) : DataContainer {
+class SingleThreadArrayDataContainer(override val dataType : DataType<*>, initialSize : Int) : DataContainer {
     var values : Array<Any?> = arrayOfNulls(initialSize)
 
     override fun <T> value(e: Int, version: Long): T? {
@@ -126,10 +186,14 @@ class SingleThreadArrayDataContainer(initialSize : Int) : DataContainer {
             }
         }
     }
+
+    override fun remove(e: Int) {
+        values[e] = null
+    }
 }
 
 @Suppress("UNCHECKED_CAST")
-class VersionedArrayDataContainer(initialSize: Int) : DataContainer {
+class VersionedArrayDataContainer(override val dataType : DataType<*>, initialSize: Int) : DataContainer {
     var values : Array<VersionedContainer?> = arrayOfNulls(initialSize)
     var minVersion: Long = 0L
 
@@ -215,6 +279,10 @@ class VersionedArrayDataContainer(initialSize: Int) : DataContainer {
             }
         }
     }
+
+    override fun remove(e: Int) {
+        values[e] = null
+    }
 }
 
 
@@ -239,11 +307,21 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
     var entities = mutableSetOf<Entity>()
     var entityCounter = AtomicInteger()
     var entityCapacity = 2048
+    val destroyedEntities = mutableListOf<Entity>()
     var globalEntity = createEntity()
 
+    var eventCallbacks = listOf<(Event) -> Unit>()
+
+    fun fireEvent(event : Event) {
+        eventCallbacks.forEach { fn -> fn(event)}
+    }
 
     fun createEntity() : Entity {
-        val ret = Entity(entityCounter.getAndIncrement())
+        val ret = if (destroyedEntities.isNotEmpty()) {
+            destroyedEntities.pop()
+        } else {
+            Entity(entityCounter.getAndIncrement())
+        }
         entities.add(ret)
 
         if (entityCapacity <= ret.id) {
@@ -254,6 +332,13 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
         }
 
         return ret
+    }
+    fun destroyEntity(ent : Entity) {
+        entities.remove(ent)
+        for (dc in dataContainers) {
+            dc?.remove(ent.id)
+        }
+        destroyedEntities.add(ent)
     }
 
     inline fun <T : B> dataContainer(dt : DataType<T>) : DataContainer {
@@ -307,12 +392,12 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
     fun <T : B>register(dt : DataType<T>) {
         synchronized(this) {
             if (dt.versioned) {
-                dataContainers[dt.index] = VersionedArrayDataContainer(entityCapacity)
+                dataContainers[dt.index] = VersionedArrayDataContainer(dt, entityCapacity)
             } else {
                 if (dt.sparse) {
-                    dataContainers[dt.index] = UnversionedMapDataContainer()
+                    dataContainers[dt.index] = UnversionedMapDataContainer(dt)
                 } else {
-                    dataContainers[dt.index] = SingleThreadArrayDataContainer(entityCapacity)
+                    dataContainers[dt.index] = SingleThreadArrayDataContainer(dt, entityCapacity)
                 }
             }
             dataTypes[dt.index] = dt
@@ -331,6 +416,21 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
 
     fun <T : B> Entity.attachData(t: T) {
         return this@WorldT.attachData(this, t)
+    }
+
+    fun Entity.printAllData() {
+        ConfigRegistration.activeWorld = this@WorldT as WorldT<EntityData>
+        val renderOptions = ConfigRenderOptions.concise().setFormatted(true).setComments(false).setOriginComments(false)
+        println("/==============================================================\\")
+        println(this.toString(this@WorldT))
+        println()
+        for (dc in dataContainers) {
+            dc?.value<Any>(this.id, DataContainer.LatestVersion)?.let {
+                val typeStr = dc.dataType.toString()
+                println(typeStr + " " + it.toConfig(typeStr).root()[typeStr]?.render(renderOptions))
+            }
+        }
+        println("\\==============================================================/")
     }
 }
 

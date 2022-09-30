@@ -1,14 +1,22 @@
 package hfcom.display
 
-import arx.core.Vec3f
+import arx.core.Noto
 import arx.engine.*
 import hfcom.game.CharacterMoved
 import org.lwjgl.glfw.GLFW
 import java.lang.Float.max
 import java.lang.Float.min
+import java.util.Collections.emptyIterator
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.abs
+import kotlin.math.sin
 
 private var AnimationIdCounter = AtomicLong(0L)
+
+enum class AnimationKind {
+    CharacterMove,
+    AP
+}
 
 sealed class Animation(val entity: Entity?) {
     var id : Long = AnimationIdCounter.incrementAndGet()
@@ -39,6 +47,8 @@ sealed class Animation(val entity: Entity?) {
         return null
     }
 
+    abstract val animationKind : AnimationKind
+
 }
 
 
@@ -46,8 +56,35 @@ data class CharacterMoveAnimation(val character: Entity, val from: MapCoord, val
     fun currentPosition() : MapCoordf {
         val delta = (to - from).toFloat()
         val raw = from.toFloat() + delta * f
-        return MapCoordf(raw)
+
+        return if (to.z > from.z) {
+            val sn = sin(f * 2.5f)
+            val pz = if (f < 0.5f) {
+                sn * 1.25f
+            } else {
+                max(sn * 1.25f, 1.0f)
+            }
+            raw.z = from.z + (pz * (to.z - from.z).toFloat())
+            MapCoordf(raw)
+        } else if (to.z < from.z) {
+            val pz = max(sin((f * 2.3f + 0.93f)) * 1.25f, 0.0f)
+            raw.z = to.z + (from.z - to.z) * pz
+            MapCoordf(raw)
+        } else {
+            MapCoordf(raw)
+        }
     }
+
+    override val animationKind = AnimationKind.CharacterMove
+}
+
+data class CharacterAPAnimation(val character : Entity, val from : Double, val to : Double) : Animation(character) {
+
+    fun currentAP() : Double {
+        return from + (to - from) * f
+    }
+
+    override val animationKind = AnimationKind.AP
 }
 
 
@@ -71,6 +108,27 @@ data class AnimationGroup(var animations: List<Animation>) {
     }
 }
 
+data class AnimationContext(
+    val animationsByEntityAndKind : Map<Entity, Map<AnimationKind, Animation>>,
+    val entityAnimatedPositions : Map<Entity, MapCoordf>,
+    val animatedEntitiesByPosition : Map<MapCoord2D, List<Pair<Entity, MapCoordf>>>,
+) {
+    fun animationsForEntity(ent : Entity) : Iterator<Animation> {
+        return animationsByEntityAndKind[ent]?.values?.iterator() ?: emptyIterator()
+    }
+
+    fun nonEmpty() : Boolean {
+        return animationsByEntityAndKind.isNotEmpty()
+    }
+
+    fun hasPositionAnimation(e : Entity) : Boolean {
+        return entityAnimatedPositions.contains(e)
+    }
+    fun positionAnimatedEntitiesAt(c: MapCoord2D) : List<Pair<Entity, MapCoordf>> {
+        return animatedEntitiesByPosition[c] ?: emptyList()
+    }
+}
+
 data class AnimationData(
     var animationGroups: List<AnimationGroup> = listOf()
 ) : DisplayData {
@@ -82,31 +140,22 @@ data class AnimationData(
 
     val emptyAnimationGroup = AnimationGroup(emptyList())
 
-    private var entityAnimatedPositions : Map<Entity, MapCoordf> = mapOf()
-    private var animatedEntitiesByPosition : Map<MapCoord2D, List<Pair<Entity, MapCoordf>>> = mapOf()
+    private val emptyAnimationContext : AnimationContext = AnimationContext(mapOf(), mapOf(), mapOf())
+    private var animationContextIntern : AnimationContext = emptyAnimationContext
+    val animationContext : AnimationContext get() { return animationContextIntern }
 
 
-    fun hasPositionAnimation(e : Entity) : Boolean {
-        return entityAnimatedPositions.contains(e)
-    }
-    fun positionAnimatedEntitiesAt(c: MapCoord2D) : List<Pair<Entity, MapCoordf>> {
-        return animatedEntitiesByPosition[c] ?: emptyList()
-    }
-
-    fun setEntityPositionAnimations(pos : Map<Entity, MapCoordf>) {
-        entityAnimatedPositions = pos
+    fun updateAnimationContext(animationsByEntityAndKind : Map<Entity, Map<AnimationKind, Animation>>, pos : Map<Entity, MapCoordf>) {
         val inverted = mutableMapOf<MapCoord2D, List<Pair<Entity, MapCoordf>>>()
         for ((e,c) in pos) {
             inverted[c.toMapCoord2D(round = false)] = (inverted[c.toMapCoord2D(round = false)] ?: emptyList()) + Pair(e, c)
         }
-        animatedEntitiesByPosition = inverted
+        animationContextIntern = AnimationContext(animationsByEntityAndKind, pos, inverted)
     }
 
-
-    val activeAnimationGroup: AnimationGroup
-        get() {
-            return animationGroups.getOrNull(0) ?: emptyAnimationGroup
-        }
+    fun clearAnimationContext() {
+        animationContextIntern = emptyAnimationContext
+    }
 
     fun createAnimationGroup(vararg animations : Animation) {
         animationGroups = animationGroups + AnimationGroup(animations.toList())
@@ -132,45 +181,87 @@ object AnimationComponent : DisplayComponent() {
 
         return if (AD.animationGroups.isNotEmpty()) {
             val now = GLFW.glfwGetTime().toFloat()
-            val ag = AD.animationGroups[0]
-            var finished : List<Animation> = emptyList()
-            for (anim in ag.animations) {
-                if (anim.startedAt == null) {
-                    anim.startedAt = now
-                    fireEvent(AnimationStarted(anim))
+
+            var rerun = true
+            var updateContext = false
+
+            while(rerun && AD.animationGroups.isNotEmpty()) {
+                rerun = false
+
+                val ag = AD.animationGroups[0]
+                var finished: List<Animation> = emptyList()
+                for (anim in ag.animations) {
+                    if (anim.startedAt == null) {
+                        anim.startedAt = now
+                        fireEvent(AnimationStarted(anim))
+                        rerun = true
+                        updateContext = true
+                    }
+                    anim.curTime = now
+
+                    if (anim.curTime!! - anim.startedAt!! >= anim.duration) {
+                        fireEvent(AnimationEnded(anim))
+                        finished = finished + anim
+                        rerun = true
+                        updateContext = true
+                    }
                 }
-                anim.curTime = now
 
-                if (anim.curTime!! - anim.startedAt!! >= anim.duration) {
-                    fireEvent(AnimationEnded(anim))
-                    finished = finished + anim
+                var toAdd: List<Animation> = emptyList()
+                for (anim in finished) {
+                    toAdd = toAdd + anim.followedBy
+                }
+                if (finished.isNotEmpty()) {
+                    ag.animations = ag.animations - finished.toSet()
+                }
+                ag.animations = ag.animations + toAdd
+                if (ag.animations.isEmpty()) {
+                    AD.animationGroups = AD.animationGroups.drop(1)
+                    rerun = true
                 }
             }
 
-            var toAdd : List<Animation> = emptyList()
-            for (anim in finished) {
-                toAdd = toAdd + anim.followedBy
+            val organizedAnims : Map<Entity, Map<AnimationKind, Animation>> = if (updateContext) {
+                val ret = mutableMapOf<Entity, MutableMap<AnimationKind, Animation>>()
+                for (ag in AD.animationGroups) {
+                    // do a breadth first iteration through animations, keeping the first one for any
+                    // given (entity, kind) combination
+                    val q = ArrayDeque<Animation>()
+                    for (an in ag.animations) {
+                        q.addLast(an)
+                    }
+                    while (q.isNotEmpty()) {
+                        val anim = q.removeFirst()
+                        if (anim.entity != null) {
+                            val m = ret.getOrPut(anim.entity) { mutableMapOf() }
+                            m.putIfAbsent(anim.animationKind, anim)
+                        } else {
+                            Noto.warn("We don't really handle non-entity animations yet")
+                        }
+                        for (childAnim in anim.followedBy) {
+                            q.addLast(childAnim)
+                        }
+                    }
+                }
+                ret
+            } else {
+                AD.animationContext.animationsByEntityAndKind
             }
-            if (finished.isNotEmpty()) {
-                ag.animations = ag.animations - finished.toSet()
-            }
-            ag.animations = ag.animations + toAdd
-            if (ag.animations.isEmpty()) {
-                AD.animationGroups = AD.animationGroups.drop(1)
-            }
-
 
             var positionOverrides = mapOf<Entity, MapCoordf>()
-            for (anim in AD.activeAnimationGroup.animations) {
-                when (anim) {
-                    is CharacterMoveAnimation -> positionOverrides = positionOverrides + (anim.character to anim.currentPosition())
+            for (animMap in organizedAnims.values) {
+                for (anim in animMap.values) {
+                    when (anim) {
+                        is CharacterMoveAnimation -> positionOverrides = positionOverrides + (anim.character to anim.currentPosition())
+                        else -> {}
+                    }
                 }
             }
-            AD.setEntityPositionAnimations(positionOverrides)
+            AD.updateAnimationContext(organizedAnims, positionOverrides)
 
             true
         } else {
-            AD.setEntityPositionAnimations(mapOf())
+            AD.clearAnimationContext()
 
             false
         }
@@ -180,7 +271,7 @@ object AnimationComponent : DisplayComponent() {
         if (e !is GameEvent) { return }
 
         when (e) {
-            is CharacterMoved -> world[AnimationData]?.createAnimationGroup(CharacterMoveAnimation(e.character, e.from, e.to).withDuration(e.from.distanceTo(e.to) * 0.25f))
+            is CharacterMoved -> world[AnimationData]?.createAnimationGroup(CharacterMoveAnimation(e.character, e.from, e.to).withDuration(e.from.xy.distanceTo(e.to.xy) * 0.25f + min(abs(e.from.z - e.to.z).toFloat(), 1.0f) * 0.1f))
         }
     }
 }

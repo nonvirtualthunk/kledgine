@@ -70,7 +70,9 @@ class Engine(
     var displayComponents : MutableList<DisplayComponent> = mutableListOf()
 ) {
 
-    var world = World()
+    var world = World().apply {
+        eventCallbacks = eventCallbacks + { e -> handleEvent(e) }
+    }
 
     val components : List<EngineComponent> get() { return gameComponents + displayComponents }
 

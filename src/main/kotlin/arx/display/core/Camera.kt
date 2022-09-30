@@ -43,7 +43,7 @@ class PixelCamera(var origin : Vec3f = Vec3f(0.0f, 0.0f, 0.0f), var scale : Floa
 
     override fun projectionMatrix(): Mat4 {
         val s = frameBufferSize()
-        return translation(Float3(1f, 1f, 0.0f)) * ortho(0.0f, s.x.toFloat() / (scale * scaleIncrement), 0.0f, s.y.toFloat() / (scale * scaleIncrement), 0.0f, 100.0f)
+        return translation(Float3(1f, 1f, 0.0f)) * ortho(0.0f, s.x.toFloat(), 0.0f, s.y.toFloat(), 0.0f, 100.0f) * scale(Float3((scale * scaleIncrement)))
     }
 
     override fun modelviewMatrix(): Mat4 {

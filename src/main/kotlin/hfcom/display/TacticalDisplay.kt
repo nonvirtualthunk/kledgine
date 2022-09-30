@@ -1,12 +1,11 @@
 package hfcom.display
 
 import arx.core.*
+import arx.core.RGBA
+import arx.core.Resources.image
 import arx.display.components.Cameras
 import arx.display.components.get
-import arx.display.core.Key
-import arx.display.core.MinimalVertex
-import arx.display.core.TextureBlock
-import arx.display.core.VAO
+import arx.display.core.*
 import arx.engine.*
 import arx.engine.Event
 import hfcom.application.MainCamera
@@ -20,31 +19,41 @@ object TacticalMapComponent : DisplayComponent() {
     val shader = Resources.shader("hfcom/shaders/world")
 
     var mousedOverTile : MapCoord2D? = null
+    var selectedCharacter : Entity? = null
     var forceRedraw = false
 
-    fun World.renderEntity(entity: Entity, animGroup: AnimationGroup, p: Vec3f) {
-        val cd = entity[CharacterData]  ?: return
-        val pd = entity[Physical] ?: return
-        val cc = CharacterClasses[cd.characterClass] ?: return
 
-        val tc2 = tb.getOrUpdate(cc.image.toImage())
+    var previewPath : Pathfinder.Path<MapCoord>? = null
+    var previewPathTiles : Set<MapCoord> = setOf()
 
-
-
+    fun renderQuad(p: Vec3f, image: ImageRef, dimensions : Vec2f) {
+        val tc = tb.getOrUpdate(image.toImage())
         for (q in 0 until 4) {
             vao.addV().apply {
-                vertex = p + (CenteredUnitSquare3D[q])
-                texCoord = tc2[q]
+                vertex = p + (CenteredUnitSquare3D[q] * Vec3f(dimensions.x, dimensions.y, 1.0f))
+                texCoord = tc[q]
                 color = RGBA(255u, 255u, 255u, 255u)
             }
         }
         vao.addIQuad()
     }
 
+    fun World.renderEntity(entity: Entity, animContext: AnimationContext, p: Vec3f) {
+        val cd = entity[CharacterData]  ?: return
+        val pd = entity[Physical] ?: return
+        val cc = CharacterClasses[cd.characterClass] ?: return
+
+        renderQuad(p, cc.image, Vec2f(1.0f, 1.0f))
+
+        if (selectedCharacter == entity) {
+            renderQuad(p + Vec3f(0.0f,0.5f,0.0f), image("hfcom/display/ui/selection_arrow.png"), Vec2f(0.25f, 0.25f))
+        }
+    }
+
     override fun update(world: World): Boolean {
-        val AD = world.global(AnimationData)
-        val animGroup = AD!!.activeAnimationGroup
-        if (vao.modificationCounter == 0 || animGroup.animations.isNotEmpty() || forceRedraw) {
+        val AD = world.global(AnimationData)!!
+        val animContext = AD.animationContext
+        if (vao.modificationCounter == 0 || animContext.nonEmpty() || forceRedraw) {
             forceRedraw = false
             with(world) {
                 vao.reset()
@@ -64,20 +73,18 @@ object TacticalMapComponent : DisplayComponent() {
                         }
                         for (z in startZ until tile.terrains.size) {
                             MapCoord.project(x, y, z, p)
-                            val tc = tb.getOrUpdate(Terrains[tile.terrains[z]]!!.images[0].toImage())
 
-                            for (q in 0 until 4) {
-                                vao.addV().apply {
-                                    vertex = p + CenteredUnitSquare3D[q]
-                                    texCoord = tc[q]
-                                    color = RGBA(255u, 255u, 255u, 255u)
+                            tile.terrains[z]?.ifPresent { terrain ->
+                                renderQuad(p, Terrains[terrain]!!.images[0].toImage(), Vec2f(1.0f, 1.0f))
+
+                                if (previewPathTiles.contains(MapCoord(x,y,z+1))) {
+                                    renderQuad(p, image("hfcom/display/ui/tile_selection_blue.png"), Vec2f(1.0f, 1.0f))
                                 }
                             }
-                            vao.addIQuad()
                         }
 
                         if (mousedOverTile != null && mousedOverTile!!.x == x && mousedOverTile!!.y == y) {
-                            val tc = tb.getOrUpdate(Resources.image("hfcom/display/ui/tile_cursor.png"))
+                            val tc = tb.getOrUpdate(image("hfcom/display/ui/tile_cursor.png"))
 
                             for (q in 0 until 4) {
                                 vao.addV().apply {
@@ -89,14 +96,14 @@ object TacticalMapComponent : DisplayComponent() {
                             vao.addIQuad()
                         }
 
-                        for ((e, c) in AD.positionAnimatedEntitiesAt(MapCoord2D(x,y))) {
-                            renderEntity(e, animGroup, c.project())
+                        for ((e, c) in animContext.positionAnimatedEntitiesAt(MapCoord2D(x,y))) {
+                            renderEntity(e, animContext, c.project())
                         }
 
                         for (entity in tile.entities) {
                             entity[Physical]?.position?.project(p)
-                            if (! AD.hasPositionAnimation(entity)) {
-                                renderEntity(entity, animGroup, p)
+                            if (! animContext.hasPositionAnimation(entity)) {
+                                renderEntity(entity, animContext, p)
                             }
                         }
                     }
@@ -124,16 +131,37 @@ object TacticalMapComponent : DisplayComponent() {
     fun pixelToMapCoord(world: World, v : Vec2f) : MapCoord2D? {
         val tm = world[TacticalMap] ?: return null
         val mapCoord = MapCoord2D.unproject(world[Cameras][MainCamera].unproject(v) + Vec2f(0.0f, (tm.groundLevel - 1) * -0.25f))
-        if (mapCoord.x >= 0 && mapCoord.y >= 0 && mapCoord.x < tm.tiles.dimensions.x && mapCoord.y < tm.tiles.dimensions.y) {
-            return mapCoord
+        return if (mapCoord.x >= 0 && mapCoord.y >= 0 && mapCoord.x < tm.tiles.dimensions.x && mapCoord.y < tm.tiles.dimensions.y) {
+            mapCoord
         } else {
-            return null
+            null
         }
     }
 
-    fun updateMousedOverTile(mc: MapCoord2D?) {
+    fun World.updateMousedOverTile(mc: MapCoord2D?) {
         if (mousedOverTile != mc) {
             mousedOverTile = mc
+
+            if (mc != null) {
+                val tm = this[TacticalMap]!!
+                selectedCharacter?.let {selc ->
+                    val mc3d = MapCoord(mc, tm.tiles[mc].occupiableZLevels(2).next())
+
+                    if (tm.tiles[mc].entities.any { e -> isEnemy(e, selc) }) {
+                        previewPath = pathfinder(this, selc)
+                            .findPath(selc[Physical]?.position ?: MapCoord(0, 0, 0), { t -> t.distanceTo(mc3d) <= 1.0f }, mc3d)
+                        previewPathTiles = previewPath?.steps?.drop(1)?.toSet() ?: emptySet()
+                    } else {
+                        previewPath = pathfinder(this, selc)
+                            .findPath(selc[Physical]?.position ?: MapCoord(0, 0, 0), Pathfinder.SingleDestination(mc3d), mc3d)
+                        previewPathTiles = previewPath?.steps?.drop(1)?.toSet() ?: emptySet()
+                    }
+                }
+            } else {
+                previewPath = null
+                previewPathTiles = setOf()
+            }
+
             forceRedraw = true
         }
     }
@@ -161,19 +189,19 @@ object TacticalMapComponent : DisplayComponent() {
                 }
                 is TMMouseReleaseEvent -> {
                     val map = world[TacticalMap] ?: return
-                    for (ent in entitiesWithData(CharacterData)) {
-                        val pd = ent[Physical] ?: continue
 
-                        val tile = map.tiles[pd.position.x, pd.position.y]
-                        tile.entities = tile.entities - ent
-
-                        val newTile = map.tiles[event.position.x, event.position.y]
-                        newTile.entities = newTile.entities + ent
-                        val oldPos = pd.position
-                        pd.position = MapCoord(event.position, newTile.terrains.size)
-
-                        fireEvent(CharacterMoved(ent, oldPos, pd.position))
+                    val targetTileEntities = map.tiles[event.position.x, event.position.y].entities
+                    if (targetTileEntities.isNotEmpty()) {
+                        selectedCharacter = targetTileEntities[0]
                         forceRedraw = true
+                    } else {
+                        selectedCharacter.ifPresent { ent ->
+                            val pd = +ent[Physical]
+                            previewPath.ifPresent { path ->
+                                moveCharacter(ent, path)
+                                forceRedraw = true
+                            }
+                        }
                     }
                 }
                 is TMMouseMoveEvent -> {

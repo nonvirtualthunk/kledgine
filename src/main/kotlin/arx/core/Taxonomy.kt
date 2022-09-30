@@ -2,7 +2,15 @@ package arx.core
 
 import arx.core.Noto.err
 import arx.core.Noto.warn
+import arx.core.Taxonomy.UnknownThing
+import arx.engine.DataType
+import arx.engine.GameData
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValue
+import io.github.config4k.ClassContainer
+import io.github.config4k.CustomType
+import io.github.config4k.registerCustomType
 import java.lang.Integer.min
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -25,6 +33,10 @@ data class Taxon(val namespace : String, val name: String, val parents : List<Ta
 
     override fun hashCode(): Int {
         return id
+    }
+
+    override fun toString(): String {
+        return "†$name"
     }
 }
 
@@ -65,7 +77,20 @@ fun t(str: String) : Taxon {
     return Taxonomy.taxon(str)
 }
 
+fun String.toTaxon() : Taxon {
+    return t(this)
+}
+
+fun ConfigValue?.asTaxon() : Taxon {
+    return asStr()?.toTaxon() ?: UnknownThing
+}
+
+
 object Taxonomy {
+    init {
+        registerCustomTypeRender<Taxon>()
+    }
+
     val RootNamespace = ""
 
     val UnknownThing = Taxon(RootNamespace, "UnknownThing")
@@ -208,6 +233,17 @@ object Taxonomy {
     }
 
 }
+
+
+data class Identity (val identity : Taxon, val name : String? = null) : GameData {
+    companion object : DataType<Identity>( Identity(UnknownThing) )
+    override fun dataType() : DataType<*> { return Identity }
+}
+
+operator fun Identity?.unaryPlus() : Identity {
+    return this?: Identity.defaultInstance
+}
+
 
 fun main() {
     Taxonomy.taxon("X")

@@ -4,7 +4,11 @@ import arx.core.Axis
 import arx.core.Axis2D
 
 open class Vec2f(var elem0: Float = 0.toFloat(), var elem1: Float = 0.toFloat()) {
-
+    companion object {
+        init {
+            registerCustomTypeRender<Vec2f>()
+        }
+    }
 
     operator fun invoke(arg0: Float, arg1: Float) {
         elem0 = arg0

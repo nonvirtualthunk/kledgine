@@ -1,0 +1,8 @@
+Factions {
+  Enemy {
+
+  }
+  Player {
+
+  }
+}

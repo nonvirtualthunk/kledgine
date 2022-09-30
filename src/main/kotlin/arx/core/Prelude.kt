@@ -70,6 +70,12 @@ fun <T> MutableList<T>.swapAndPop(i: Int) {
     this.removeAt(size-1)
 }
 
+fun <T> MutableList<T>.pop() : T {
+    val ret = this[size - 1]
+    this.removeAt(size-1)
+    return ret
+}
+
 
 
 sealed interface GuardLet<U> {
@@ -90,6 +96,7 @@ object NullGuardLet : GuardLet<Any> {
     }
 }
 
+@OptIn(ExperimentalContracts::class)
 @Suppress("UNCHECKED_CAST")
 inline infix fun <T, U> T?.ifLet(block : (T) -> U) : GuardLet<U> {
     contract {
@@ -108,6 +115,18 @@ inline infix fun <T> T?.ifPresent(block : (T) -> Unit) {
     }
     if (this != null) {
         block(this)
+    }
+}
+
+inline infix fun <T, R> T?.expectLet(block : (T) -> R) : R? {
+    contract {
+        callsInPlace(block, InvocationKind.AT_MOST_ONCE)
+    }
+    return if (this != null) {
+        block(this)
+    } else {
+        Noto.recordError("expected non-null value in expectLet")
+        null
     }
 }
 

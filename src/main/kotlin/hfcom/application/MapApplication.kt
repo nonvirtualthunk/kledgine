@@ -8,6 +8,7 @@ import arx.display.core.PixelCamera
 import arx.engine.*
 import hfcom.display.*
 import hfcom.game.*
+import io.github.config4k.toConfig
 
 
 object MainCamera : CameraID {
@@ -23,24 +24,38 @@ object MapGeneratorComponent : GameComponent() {
 
             for (x in 0 until 64) {
                 for (y in 0 until 64) {
-                    val entities = if (x == 2 && y == 2) {
-                        val c = createEntity()
-                        c.attachData(Physical(position = MapCoord(x,y,2), size = 2))
-                        c.attachData(CharacterData(hp = Reduceable(10), characterClass = t("CharacterClasses.Archer")))
-                        listOf(c)
-                    } else {
-                        emptyList()
-                    }
-
                     val terrains = if (x == 5 && y == 2) {
                         listOf(t("Terrains.Stone"),t("Terrains.Stone"),t("Terrains.Grass"))
                     } else if (x == 6 && y == 2) {
                         listOf(t("Terrains.Stone"),t("Terrains.Stone"), t("Terrains.Stone"), t("Terrains.Grass"))
+                    } else if (x == 7 && y == 2) {
+                        listOf(t("Terrains.Stone"),t("Terrains.Stone"), t("Terrains.Stone"), t("Terrains.Stone"), t("Terrains.Grass"))
                     } else {
                         listOf(t("Terrains.Stone"), t("Terrains.Grass"))
                     }
-                    tm.tiles[x, y] = Tile(terrains, entities = entities)
+                    tm.tiles[x, y] = Tile(terrains)
+
+
+                    val entities = if (x == 2 && y == 2) {
+                        listOf(createCharacter(t("CharacterClasses.Archer"), t("Factions.Player"), "Tobold"))
+                    } else if (x == 2 && y == 6) {
+                        listOf(createCharacter(t("CharacterClasses.Cultist"), t("Factions.Enemy"), "Cultist"))
+                    } else {
+                        emptyList()
+                    }
+
+                    for (c in entities) {
+                        placeEntity(c, MapCoord2D(x, y))
+                    }
                 }
+            }
+
+            for (ent in entitiesWithData(CharacterData)) {
+                startMission(ent)
+
+                ent.printAllData()
+
+                println(possibleActions(ent))
             }
         }
     }

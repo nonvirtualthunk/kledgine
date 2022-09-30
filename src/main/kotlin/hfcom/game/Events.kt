@@ -8,6 +8,10 @@ import hfcom.display.MapCoord2D
 
 data class CharacterMoved(val character: Entity, val from: MapCoord, val to: MapCoord) : GameEvent()
 
+data class CharacterUsedAP(val character : Entity, val apConsumed : Double, val apRemaining : Double) : GameEvent() {
+    val apBefore : Double get() { return apRemaining + apConsumed }
+}
+data class CharacterPlaced(val character: Entity, val at : MapCoord) : GameEvent()
 
 
 

@@ -1,0 +1,8 @@
+Triggers {
+  OnAttack {
+
+  }
+  OnAttacked {
+
+  }
+}

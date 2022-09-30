@@ -6,6 +6,7 @@ import arx.core.Taxon
 import com.typesafe.config.Config
 import arx.core.*
 import arx.core.Taxonomy.taxon
+import com.typesafe.config.ConfigValue
 
 
 @JvmInline
@@ -36,14 +37,14 @@ abstract class Library<T> {
 }
 
 
-abstract class SimpleLibrary<T : FromConfig>(topLevelKey: String, confPaths: List<String>, instantiator : () -> T) : Library<T>() {
+abstract class SimpleLibrary<T>(topLevelKey: String, confPaths: List<String>, instantiator : (ConfigValue) -> T?) : Library<T>() {
 
     init {
         for (path in confPaths) {
             for ((k,v) in Resources.config(path)[topLevelKey]) {
-                val newV = instantiator()
-                newV.readFromConfig(v)
-                add(taxon("$topLevelKey.$k"), newV)
+                instantiator(v)?.let { newV ->
+                    add(taxon("$topLevelKey.$k"), newV)
+                }
             }
         }
     }

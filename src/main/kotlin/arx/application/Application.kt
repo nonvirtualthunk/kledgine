@@ -1,5 +1,6 @@
 package arx.application
 
+import arx.core.ConfigRegistration
 import arx.core.Resources
 import arx.core.Vec2f
 import arx.core.Vec2i
@@ -26,6 +27,7 @@ class Application {
 
     init {
         System.setProperty("java.awt.headless", "true")
+        ConfigRegistration
     }
 
     companion object {
