@@ -7,10 +7,11 @@ Skills {
     effects : [{
       stats {
         precision: 5
-        flags {
-          Aimed: true
-        }
         duration: Aimed
+      }
+    },{
+      flags {
+        Aimed : true
       }
     }]
 

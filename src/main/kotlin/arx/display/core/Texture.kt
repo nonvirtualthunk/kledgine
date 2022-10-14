@@ -74,7 +74,8 @@ class TextureBlock(size: Int, val borderWidth: Int = 1, srgbFormat : Boolean = f
             return if (existingAtlasData.revision >= img.revision) {
                 existingAtlasData
             } else {
-                System.err.println("Automatic update of image updates not yet supported in texture block")
+                data.copyFrom(img, existingAtlasData.location)
+                data.revision++
                 existingAtlasData
             }
         }

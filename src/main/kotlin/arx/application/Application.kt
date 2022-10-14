@@ -20,7 +20,7 @@ import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 import java.nio.IntBuffer
 
-class Application {
+class Application(val windowWidth : Int = 800, val windowHeight : Int = 800) {
     private var engine: Engine = Engine()
     private var activeModifiers: KeyModifiers = KeyModifiers(0)
     private var mousePosition: Vec2f = Vec2f(0.0f, 0.0f)
@@ -69,7 +69,7 @@ class Application {
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE) // the window will be resizable
 
         // Create the window
-        window = glfwCreateWindow(800, 800, "Hello World!", MemoryUtil.NULL, MemoryUtil.NULL)
+        window = glfwCreateWindow(windowWidth, windowHeight, "Hello World!", MemoryUtil.NULL, MemoryUtil.NULL)
         if (window == MemoryUtil.NULL) throw RuntimeException("Failed to create the GLFW window")
 
         // Setup a key callback. It will be called every time a key is pressed, repeated or released.

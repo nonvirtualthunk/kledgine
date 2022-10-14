@@ -348,6 +348,7 @@ class VAO<T : VertexDefinition>(val vertexDefinition : T, val indexType : IndexT
         if (name == 0) {
             initialize()
         }
+        GL.bindVertexArray(name)
         if (modificationCounter != lastSolidified) {
             vertices.sync(vi * vertexDefinition.byteStride)
             indices.sync(ii * glTypeToSize(indexType.toOpenglType()))

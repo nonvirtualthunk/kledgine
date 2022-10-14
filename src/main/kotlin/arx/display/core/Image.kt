@@ -12,6 +12,8 @@ import java.nio.ByteBuffer
 interface ImageRef {
     fun toImage() : Image
 
+    fun isSentinel() : Boolean
+
     companion object : FromConfigCreator<ImageRef> {
         override fun createFromConfig(cv: ConfigValue?): ImageRef {
             val str = cv.asStr()
@@ -32,12 +34,20 @@ data class ImagePath(val path: String) : ImageRef {
         }
         return img!!
     }
+
+    override fun isSentinel(): Boolean {
+        return false
+    }
 }
 
 object SentinelImage : ImageRef {
     val img = Image.ofSize(64,64).withPixels { x, y, v -> if (x == 0 || y == 0 || x == 63 || y == 63) { v(0u,0u,0u,255u) } else { v((x*2).toUByte(), (y * 4).toUByte(), (x*2).toUByte(), 255u) } }
     override fun toImage(): Image {
         return img
+    }
+
+    override fun isSentinel(): Boolean {
+        return true
     }
 }
 
@@ -56,6 +66,10 @@ class Image private constructor() : ImageRef {
 
     override fun toImage(): Image {
         return this
+    }
+
+    override fun isSentinel(): Boolean {
+        return false
     }
 
     fun pixelf(x: Int, y: Int) : Vec4f {
@@ -79,7 +93,7 @@ class Image private constructor() : ImageRef {
         return RGBA(data.get().toUByte(), data.get().toUByte(), data.get().toUByte(), data.get().toUByte())
     }
 
-    fun pixel(x: Int, y: Int, v: Vec4ub) {
+    fun pixel(x: Int, y: Int, v: RGBA) {
         data.position(offset(x,y))
         v.r = data.get().toUByte()
         v.g = data.get().toUByte()
@@ -95,12 +109,24 @@ class Image private constructor() : ImageRef {
         data.put(v.a.toByte())
     }
 
+    fun set(x : Int, y : Int, r : Int, g : Int, b : Int, a : Int) {
+        data.position(offset(x,y))
+        data.put(r.toByte())
+        data.put(g.toByte())
+        data.put(b.toByte())
+        data.put(a.toByte())
+    }
+
     operator fun set(x : Int, y : Int, q: Int, v: UByte) {
         data.put(offset(x,y) + q,v.toByte())
     }
 
     operator fun get(x: Int, y: Int): RGBA {
         return pixel(x,y)
+    }
+
+    fun getClamped(x: Int, y : Int) : RGBA {
+        return get(x.clamp(0,width - 1), y.clamp(0, height - 1))
     }
 
     fun sample(x: Int, y: Int, s: Int) : UByte {
@@ -132,10 +158,60 @@ class Image private constructor() : ImageRef {
         return this
     }
 
+    fun transformPixels(fn: (Int, Int, RGBA) -> Unit) : Image {
+        data.position(0)
+        val v = RGBA(0u,0u,0u,0u)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                v(data.get().toUByte(), data.get().toUByte(), data.get().toUByte(), data.get().toUByte())
+                data.position(offset(x, y))
+                fn(x,y,v)
+                data.put(v.r.toByte())
+                data.put(v.g.toByte())
+                data.put(v.b.toByte())
+                data.put(v.a.toByte())
+            }
+        }
+        return this
+    }
+
+    fun map(fn: (Int, Int, RGBA) -> Unit) : Image {
+        val out = ofSize(width, height)
+        out.data.position(0)
+        data.position(0)
+        val v = RGBA(0u,0u,0u,0u)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                v(data.get().toUByte(), data.get().toUByte(), data.get().toUByte(), data.get().toUByte())
+                fn(x,y,v)
+                out.data.put(v.r.toByte())
+                out.data.put(v.g.toByte())
+                out.data.put(v.b.toByte())
+                out.data.put(v.a.toByte())
+            }
+        }
+        return out
+    }
+
+    fun forEachPixel(fn : (Int, Int, RGBA) -> Unit) {
+        data.position(0)
+        val v = RGBA(0u,0u,0u,0u)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                v(data.get().toUByte(), data.get().toUByte(), data.get().toUByte(), data.get().toUByte())
+                fn(x,y,v)
+            }
+        }
+    }
+
     fun writeToFile(path: String) {
         data.position(0)
         STBImageWrite.stbi_flip_vertically_on_write(true)
         STBImageWrite.stbi_write_png(path, width, height, 4, data, 4*width)
+    }
+
+    fun destroy() {
+        MemoryUtil.memFree(data)
     }
 
     companion object {
@@ -177,6 +253,16 @@ class Image private constructor() : ImageRef {
             img.dimensions = Vec2i(w,h)
             img.ymult = w * 4
 
+            return img
+        }
+
+        fun ofSize(v : Vec2i) : Image {
+            return ofSize(v.x, v.y)
+        }
+
+        fun copy(other : Image) : Image {
+            val img = ofSize(other.width, other.height)
+            img.copyFrom(other, Vec2i(0,0))
             return img
         }
     }

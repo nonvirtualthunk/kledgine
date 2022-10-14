@@ -89,6 +89,40 @@ fun ConfigValue?.asList(): List<ConfigValue> {
     }
 }
 
+fun ConfigValue?.asVec3i() : Vec3i? {
+    if (this.isList()) {
+        val l = this.asList()
+        if (l.size == 3) {
+            val x = l.getOrNull(0).asInt()
+            val y = l.getOrNull(1).asInt()
+            val z = l.getOrNull(2).asInt()
+            if (x != null && y != null && z != null) {
+                return Vec3i(x,y,z)
+            } else {
+                Noto.warn("asVec3i(...) called with 3 element list but non-integer elements : $this")
+            }
+        }
+    }
+    return null
+}
+
+fun ConfigValue?.asVec2i() : Vec2i? {
+    if (this.isList()) {
+        val l = this.asList()
+        if (l.size == 3) {
+            val x = l.getOrNull(0).asInt()
+            val y = l.getOrNull(1).asInt()
+            if (x != null && y != null) {
+                return Vec2i(x,y)
+            } else {
+                Noto.warn("asVec2i(...) called with 2 element list but non-integer elements : $this")
+            }
+        }
+    }
+    return null
+}
+
+
 fun ConfigValue?.asTaxonList(): List<Taxon> {
     return this.asList().mapNotNull { it.asStr() }.map { t(it) }
 }

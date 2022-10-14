@@ -1,16 +1,18 @@
 package arx.display.core
 
 
-import arx.core.RGBA as vRGBA
+import arx.core.RGBA
+import arx.core.clamp
+import kotlin.math.roundToInt
 
 
-typealias RGBA = vRGBA;
 
-fun RGBA(r: Int, g: Int, b: Int, a: Int): RGBA {
-    return RGBA(r.toUByte(), g.toUByte(), b.toUByte(), a.toUByte())
+fun mix(a: RGBA, b : RGBA, f : Float) : RGBA {
+    val invF = 1.0f - f
+    val newR = (a.r.toFloat() * f + b.r.toFloat() * invF).roundToInt().clamp(0, 255).toUByte()
+    val newG = (a.g.toFloat() * f + b.g.toFloat() * invF).roundToInt().clamp(0, 255).toUByte()
+    val newB = (a.b.toFloat() * f + b.b.toFloat() * invF).roundToInt().clamp(0, 255).toUByte()
+    val newA = (a.a.toFloat() * f + b.a.toFloat() * invF).roundToInt().clamp(0, 255).toUByte()
+
+    return RGBA(newR, newG, newB, newA)
 }
-
-
-val White = RGBA(255,255,255,255)
-val Black = RGBA(0,0,0,255)
-val Clear = RGBA(255,255,255,0)

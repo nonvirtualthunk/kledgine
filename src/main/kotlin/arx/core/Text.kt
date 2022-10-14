@@ -1,7 +1,6 @@
 package arx.core
 
 import arx.display.core.Image
-import arx.display.core.RGBA
 import arx.display.core.SimpleQuad
 import java.awt.*
 import java.awt.font.FontRenderContext
@@ -99,10 +98,12 @@ data class RichText(
     var font: ArxFont? = null
 ) {
     constructor (str: String, color: RGBA? = null, font: ArxFont? = null) : this() {
-        if (color != null || font != null) {
-            segments.add(StyledTextSegment(str, color, font))
-        } else {
-            segments.add(SimpleTextSegment(str))
+        if (str.isNotEmpty()) {
+            if (color != null || font != null) {
+                segments.add(StyledTextSegment(str, color, font))
+            } else {
+                segments.add(SimpleTextSegment(str))
+            }
         }
     }
 }
@@ -144,6 +145,10 @@ class TextLayout {
         }
 
         private fun layoutTextSegment(layout: TextLayout, rt: RichText, text: String, color: RGBA?, cursor: Vec2i, region: Recti, font: ArxFont) {
+            if (region.width <= 0 || region.height <= 0) {
+                return
+            }
+
             val g = RecordingGlyphRenderGraphics(font, layout.quads)
             val attrStr = AttributedString(text)
             attrStr.addAttribute(TextAttribute.FONT, font.font)

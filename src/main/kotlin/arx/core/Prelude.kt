@@ -2,8 +2,8 @@
 
 package arx.core
 
-import com.typesafe.config.*
-import io.github.config4k.extract
+import java.lang.Integer.max
+import java.lang.Integer.min
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
@@ -39,8 +39,8 @@ fun axis(i: Int) : Axis {
     }
 }
 
-enum class Axis2D {
-    X,Y;
+enum class Axis2D(val vecf : Vec2f, val vec : Vec2i) {
+    X(Vec2f(1.0f,0.0f), Vec2i(1,0)),Y(Vec2f(0.0f,1.0f), Vec2i(0,1));
 
     fun to3D() : Axis {
         return when(this) {
@@ -51,9 +51,11 @@ enum class Axis2D {
 }
 
 
-enum class Cardinals2D(val vector: Vec2i) {
-    Left(Vec2i(-1,0)), Right(Vec2i(1,0)), Up(Vec2i(0,1)), Down(Vec2i(0,-1));
-}
+//enum class Cardinals2D(val vector: Vec2i) {
+//    Left(Vec2i(-1,0)), Right(Vec2i(1,0)), Up(Vec2i(0,1)), Down(Vec2i(0,-1));
+//}
+
+val Cardinals2D = arrayOf(Vec2i(-1,0), Vec2i(1,0), Vec2i(0,1), Vec2i(0, -1))
 
 val UnitSquare2D = arrayOf(Vec2f(0.0f, 0.0f), Vec2f(1.0f, 0.0f), Vec2f(1.0f, 1.0f), Vec2f(0.0f, 1.0f))
 val UnitSquare3D = arrayOf(Vec3f(0.0f, 0.0f, 0.0f), Vec3f(1.0f, 0.0f, 0.0f), Vec3f(1.0f, 1.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f))
@@ -90,10 +92,74 @@ value class ValueGuardLet(val resultValue : Any?) : GuardLet<Any?> {
     }
 }
 
+
+fun <T, U> Iterator<T>.map(fn : (T) -> U) : Iterator<U> {
+    val iter = this
+    return object : Iterator<U> {
+        override fun hasNext(): Boolean {
+            return iter.hasNext()
+        }
+
+        override fun next(): U {
+            return fn(iter.next())
+        }
+    }
+}
+
+fun <T> Iterator<T>.toList() : List<T> {
+    val ret = mutableListOf<T>()
+    while (this.hasNext()) {
+        ret.add(this.next())
+    }
+    return ret
+}
+
+fun <T> Iterator<T>.toSet() : Set<T> {
+    val ret = mutableSetOf<T>()
+    while (this.hasNext()) {
+        ret.add(this.next())
+    }
+    return ret
+}
+
 object NullGuardLet : GuardLet<Any> {
     override fun orElse(block: () -> Any): Any {
         return block()
     }
+}
+
+fun Int.clamp(a : Int, b: Int) : Int {
+    return max(min(this, b), a)
+}
+
+fun UInt.clamp(a : UInt, b: UInt) : UInt {
+    if (this < a) {
+        return a
+    }
+    if (this > b) {
+        return b
+    }
+    return this
+}
+
+fun Double.clamp(a : Double, b: Double) : Double {
+    return kotlin.math.max(kotlin.math.min(this, b), a)
+}
+
+fun maxu(a : UInt, b : UInt) : UInt {
+    return if (a > b) { a } else { b }
+}
+
+fun minu(a : UInt, b : UInt) : UInt {
+    return if (a < b) { a } else { b }
+}
+
+fun maxu(a : UByte, b : UByte) : UByte {
+    return if (a > b) { a } else { b }
+}
+
+fun minu(a : UByte, b : UByte) : UByte {
+    return if (a < b) { a } else { b }
 }
 
 @OptIn(ExperimentalContracts::class)
@@ -118,6 +184,7 @@ inline infix fun <T> T?.ifPresent(block : (T) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalContracts::class)
 inline infix fun <T, R> T?.expectLet(block : (T) -> R) : R? {
     contract {
         callsInPlace(block, InvocationKind.AT_MOST_ONCE)
@@ -129,6 +196,7 @@ inline infix fun <T, R> T?.expectLet(block : (T) -> R) : R? {
         null
     }
 }
+
 
 fun main() {
 

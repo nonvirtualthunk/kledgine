@@ -72,15 +72,21 @@ class WindowingSystemVertex : VertexDefinition() {
 }
 
 
-class WindowingSystemComponent(val windowingSystem : WindowingSystem = WindowingSystem()) : DisplayComponent() {
+
+object WindowingSystemComponent : DisplayComponent() {
     val vao = VAO(WindowingSystemVertex())
-    val textureBlock = TextureBlock(2048)
+    val textureBlock = TextureBlock(4096)
 
     var needsRerender = true
 
     val shader = Resources.shader("arx/shaders/windowing")
 
+    override fun initialize(world: World) {
+        world[WindowingSystem].registerStandardComponents()
+    }
+
     override fun update(world: World) : Boolean {
+        val windowingSystem = world[WindowingSystem]
         if (windowingSystem.updateGeometry(Application.frameBufferSize)) {
             needsRerender = true
         }
@@ -114,6 +120,10 @@ class WindowingSystemComponent(val windowingSystem : WindowingSystem = Windowing
     }
 
     fun recursiveDraw(w: Widget) {
+        if (! w.showing()) {
+            return
+        }
+
         val bmin = w.bounds.min()
         val bmax = w.bounds.max()
 
@@ -135,6 +145,7 @@ class WindowingSystemComponent(val windowingSystem : WindowingSystem = Windowing
     }
 
     override fun draw(world: World) {
+        val windowingSystem = world[WindowingSystem]
         if (needsRerender) {
             vao.reset()
             recursiveDraw(windowingSystem.desktop)
@@ -152,6 +163,7 @@ class WindowingSystemComponent(val windowingSystem : WindowingSystem = Windowing
     }
 
     override fun handleEvent(world: World, event: Event) {
+        val windowingSystem = world[WindowingSystem]
         when (event) {
             is DisplayEvent -> windowingSystem.handleEvent(event)
         }

@@ -22,9 +22,23 @@ class Pathfinder<T> (
         }
     }
 
-    data class Path<T>(val steps : List<T>, val totalCost : Double) {
+    data class Path<T>(val steps : List<T>, val costs : List<Double>, val totalCost : Double) {
         fun append(other : Path<T>) : Path<T> {
-            return Path(steps + other.steps, other.totalCost + totalCost)
+            return Path(steps + other.steps, costs + other.costs, other.totalCost + totalCost)
+        }
+
+        fun subPath(maxCost: Double) : Path<T> {
+            var newCost = 0.0
+            val newSteps = mutableListOf<T>()
+            val newCosts = mutableListOf<Double>()
+            for (i in steps.indices) {
+                if (costs[i] <= maxCost) {
+                    newSteps.add(steps[i])
+                    newCosts.add(costs[i])
+                    newCost = costs[i]
+                }
+            }
+            return Path(newSteps, newCosts, newCost)
         }
     }
 
@@ -32,7 +46,7 @@ class Pathfinder<T> (
         val f : Double get() { return g + h }
 
         fun toPath() : Path<T> {
-            val selfPath = Path(listOf(value), g)
+            val selfPath = Path(listOf(value), listOf(g), g)
             return if (parent == null) {
                 selfPath
             } else {

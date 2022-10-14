@@ -10,7 +10,7 @@ CharacterClasses {
       [{
         name : "Archer"
         precision : 1
-        maxHP : 4
+        maxHP : 2
         equipment : [Bow]
       }],
       // level 2
@@ -37,7 +37,7 @@ CharacterClasses {
       [{
         name : "Cultist"
         strength : -1
-        maxHP : 3
+        maxHP : 1
         equipment : [Dagger]
       }]
     ]

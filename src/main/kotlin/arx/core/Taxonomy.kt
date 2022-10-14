@@ -5,12 +5,7 @@ import arx.core.Noto.warn
 import arx.core.Taxonomy.UnknownThing
 import arx.engine.DataType
 import arx.engine.GameData
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValue
-import io.github.config4k.ClassContainer
-import io.github.config4k.CustomType
-import io.github.config4k.registerCustomType
 import java.lang.Integer.min
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -240,9 +235,6 @@ data class Identity (val identity : Taxon, val name : String? = null) : GameData
     override fun dataType() : DataType<*> { return Identity }
 }
 
-operator fun Identity?.unaryPlus() : Identity {
-    return this?: Identity.defaultInstance
-}
 
 
 fun main() {

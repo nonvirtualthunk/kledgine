@@ -4,12 +4,15 @@ import arx.core.*
 import arx.display.core.Image
 import arx.display.core.ImagePath
 import arx.display.core.ImageRef
-import arx.display.core.RGBA
 import arx.display.windowing.RecalculationFlag.*
 import arx.engine.*
+import com.typesafe.config.ConfigValue
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.roundToInt
+import kotlin.reflect.full.functions
+import kotlin.reflect.full.instanceParameter
 
 val WidgetIdCounter = AtomicInteger(1)
 
@@ -19,7 +22,24 @@ enum class WidgetOrientation {
     BottomRight,
     TopRight,
     BottomLeft,
-    Center
+    Center;
+
+    companion object : FromConfigCreator<WidgetOrientation> {
+        fun fromString(str: String): WidgetOrientation? {
+            return when (str.lowercase()) {
+                "topleft", "left", "top" -> TopLeft
+                "bottomright" -> BottomRight
+                "topright", "right" -> TopRight
+                "bottomleft", "bottom" -> BottomLeft
+                "center" -> Center
+                else -> null
+            }
+        }
+
+        override fun createFromConfig(cv: ConfigValue?): WidgetOrientation? {
+            return cv?.asStr()?.let { fromString(it) }
+        }
+    }
 }
 
 enum class RecalculationFlag {
@@ -28,11 +48,12 @@ enum class RecalculationFlag {
     PositionZ,
     DimensionsX,
     DimensionsY,
-    Contents
+    Contents,
+    Bindings
 }
 
 sealed interface WidgetIdentifier {
-    fun toWidget(): Widget?
+    fun toWidget(context: Widget): Widget?
 }
 
 data class WQuad(
@@ -46,7 +67,6 @@ data class WQuad(
 )
 
 
-
 /**
  * A widget identified by a name within the context of another widget's view
  * That is, it is intended to look up other widgets that share a parent and
@@ -54,18 +74,92 @@ data class WQuad(
  * `context` is the widget that is "interested" in another widget of the given
  * name.
  */
-data class WidgetNameIdentifier(val context: Widget, val name: String) : WidgetIdentifier {
-    override fun toWidget(): Widget? {
+data class WidgetNameIdentifier(val name: String) : WidgetIdentifier {
+    override fun toWidget(context: Widget): Widget? {
         return context.parent?.children?.find { it.identifier == name }
     }
 }
+
+
+val orientedConstantPattern = "(?i)(\\d+) from (.*)".toRegex()
+val orientedProportionPattern = "(?i)([\\d.]+) from (.*)".toRegex()
+val rightLeftPattern = "(?i)([\\d-]+) (right|left) of ([a-zA-Z\\d]+)".toRegex()
+val belowAbovePattern = "(?i)([\\d-]+) (below|above) ([a-zA-Z\\d]+)".toRegex()
+val expandToParentPattern = "(?i)expand\\s?to\\s?parent(?:\\((\\d+)\\))?".toRegex()
+val expandToWidgetPattern = "(?i)expand\\s?to\\s?([a-zA-Z\\d]+)(?:\\((\\d+)\\))?".toRegex()
+val percentagePattern = "(\\d+)%".toRegex()
+val centeredPattern = "(?i)center(ed)?".toRegex()
+val wrapContentPattern = "(?i)wrap\\s?content".toRegex()
+val matchPosPattern = "(?i)match ([a-zA-Z\\d]+)".toRegex()
 
 sealed interface WidgetPosition {
     data class Fixed(val offset: Int, val relativeTo: WidgetOrientation = WidgetOrientation.TopLeft) : WidgetPosition
     data class Proportional(val proportion: Float, val relativeTo: WidgetOrientation = WidgetOrientation.TopLeft, val anchorToCenter: Boolean = false) : WidgetPosition
     data class Absolute(val position: Int, val anchorTo: WidgetOrientation = WidgetOrientation.TopLeft) : WidgetPosition
+    data class Pixel(val pixelPosition: Vec2i, val anchorTo: WidgetOrientation = WidgetOrientation.TopLeft) : WidgetPosition
     object Centered : WidgetPosition
-    data class Relative(val relativeTo: WidgetIdentifier, val offset: Int, val targetAnchor: WidgetOrientation = WidgetOrientation.BottomRight, val selfAnchor: WidgetOrientation = WidgetOrientation.TopLeft) : WidgetPosition
+    data class Relative(
+        val relativeTo: WidgetIdentifier,
+        val offset: Int,
+        val targetAnchor: WidgetOrientation = WidgetOrientation.BottomRight,
+        val selfAnchor: WidgetOrientation = WidgetOrientation.TopLeft
+    ) : WidgetPosition
+
+    companion object : FromConfigCreator<WidgetPosition> {
+        override fun createFromConfig(cv: ConfigValue?): WidgetPosition? {
+            if (cv == null) {
+                return null
+            }
+            if (cv.isNum()) {
+                val num = cv.asFloat() ?: 0.0f
+                return if (num >= 1.0f || num <= 0.0f) {
+                    Fixed(num.roundToInt())
+                } else {
+                    Proportional(num)
+                }
+            } else if (cv.isStr()) {
+                val ret = fromString(cv.asStr()!!)
+                if (ret == null) {
+                    Noto.recordError("Invalid string format for WidgetPosition : ${cv.asStr()}")
+                }
+                return ret
+            } else {
+                Noto.recordError("Invalid config for WidgetPosition", mapOf("config" to cv))
+                return null
+            }
+        }
+
+        fun fromString(str: String): WidgetPosition? {
+            orientedConstantPattern.match(str)?.let { (distStr, relativeStr) ->
+                val relativeTo = WidgetOrientation.fromString(relativeStr)
+                return relativeTo?.let { Fixed(distStr.toInt(), it) }
+            }
+            orientedProportionPattern.match(str)?.let { (propStr, relativeToStr) ->
+                val prop = propStr.toFloatOrNull()
+                val relativeTo = WidgetOrientation.fromString(relativeToStr)
+                if (prop != null && relativeTo != null) {
+                    return Proportional(prop, relativeTo)
+                } else {
+                    return null
+                }
+            }
+            rightLeftPattern.match(str)?.let { (distStr, dirStr, targetStr) ->
+                val dir = WidgetOrientation.fromString(dirStr) ?: WidgetOrientation.TopLeft
+                return Relative(WidgetNameIdentifier(targetStr), distStr.toInt(), dir)
+            }
+            belowAbovePattern.match(str)?.let { (distStr, dirStr, targetStr) ->
+                val dir = WidgetOrientation.fromString(dirStr) ?: WidgetOrientation.TopLeft
+                return Relative(WidgetNameIdentifier(targetStr), distStr.toInt(), dir)
+            }
+            matchPosPattern.match(str)?.let { (targetStr) ->
+                return Relative(WidgetNameIdentifier(targetStr), 0, WidgetOrientation.TopLeft, WidgetOrientation.TopLeft)
+            }
+            if (centeredPattern.match(str) != null) {
+                return Centered
+            }
+            return null
+        }
+    }
 }
 
 sealed interface WidgetDimensions {
@@ -87,9 +181,55 @@ sealed interface WidgetDimensions {
     }
 
     fun isIntrinsic(): Boolean {
-        return when(this) {
+        return when (this) {
             is Intrinsic -> true
             else -> false
+        }
+    }
+
+    companion object : FromConfigCreator<WidgetDimensions> {
+        override fun createFromConfig(cv: ConfigValue?): WidgetDimensions? {
+            if (cv == null) {
+                return null
+            }
+            if (cv.isNum()) {
+                val num = cv.asFloat() ?: 0.0f
+                return if (num > 1.0f) {
+                    Fixed(num.roundToInt())
+                } else if (num < 0.0f) {
+                    Relative(num.toInt())
+                } else {
+                    Proportional(num)
+                }
+            } else if (cv.isStr()) {
+                val ret = fromString(cv.asStr()!!)
+                if (ret == null) {
+                    Noto.recordError("Invalid string format for WidgetDimensions : ${cv.asStr()}")
+                }
+                return ret
+            } else {
+                Noto.recordError("Invalid config for WidgetDimensions", mapOf("config" to cv))
+                return null
+            }
+        }
+
+        fun fromString(str: String): WidgetDimensions? {
+            if (str.lowercase() == "intrinsic") {
+                return Intrinsic()
+            }
+            expandToParentPattern.match(str)?.let { (gapStr) ->
+                return ExpandToParent(gapStr.toIntOrNull() ?: 0)
+            }
+            expandToWidgetPattern.match(str)?.let { (widgetStr, gapStr) ->
+                return ExpandTo(WidgetNameIdentifier(widgetStr), gapStr.toIntOrNull() ?: 0)
+            }
+            percentagePattern.match(str)?.let { (percentStr) ->
+                return Proportional(percentStr.toFloat() / 100.0f)
+            }
+            if (wrapContentPattern.match(str) != null) {
+                return WrapContent
+            }
+            return null
         }
     }
 }
@@ -99,7 +239,8 @@ enum class DependencyKind {
     Position,
     Dimensions
 }
-fun dependencyKind(l : Long) : DependencyKind {
+
+fun dependencyKind(l: Long): DependencyKind {
     return when (l) {
         0L -> DependencyKind.PartialPosition
         1L -> DependencyKind.Position
@@ -127,12 +268,31 @@ value class Dependency(val packed: Long) {
         const val KindShift = AxisShift + 2
         const val WidgetShift = KindShift + 2
     }
-    val axisOrd : Int get() { return (packed and AxisMask).toInt() }
-    val axis : Axis get() { return axis((packed and AxisMask).toInt()) }
-    val kindOrd : Int get() { return ((packed shr KindShift) and KindMask).toInt() }
-    val kind : DependencyKind get() { return dependencyKind((packed shr KindShift) and KindMask) }
-    val widgetId : Int get() { return (packed shr WidgetShift).toInt() }
-    fun isEmpty() : Boolean { return packed == 0L }
+
+    val axisOrd: Int
+        get() {
+            return (packed and AxisMask).toInt()
+        }
+    val axis: Axis
+        get() {
+            return axis((packed and AxisMask).toInt())
+        }
+    val kindOrd: Int
+        get() {
+            return ((packed shr KindShift) and KindMask).toInt()
+        }
+    val kind: DependencyKind
+        get() {
+            return dependencyKind((packed shr KindShift) and KindMask)
+        }
+    val widgetId: Int
+        get() {
+            return (packed shr WidgetShift).toInt()
+        }
+
+    fun isEmpty(): Boolean {
+        return packed == 0L
+    }
 
     override fun toString(): String {
         return "Dependency(widget: $widgetId, kind: $kind, axis: $axis)"
@@ -157,20 +317,23 @@ data class Dependent(
 class DependencySet(initialSize: Int = 1024) {
     val intern = LongOpenHashSet(initialSize)
 
-    fun add(d: Dependency) : Boolean {
+    fun add(d: Dependency): Boolean {
         return intern.add(d.packed)
     }
-    fun add(w: Widget, k: DependencyKind, axis: Axis) : Boolean {
-        return intern.add(Dependency(w,k,axis).packed)
-    }
-    fun contains(d: Dependency) : Boolean {
-        return intern.contains(d.packed)
-    }
-    fun contains(w: Widget, k: DependencyKind, axis: Axis) : Boolean {
-        return intern.contains(Dependency(w,k,axis).packed)
+
+    fun add(w: Widget, k: DependencyKind, axis: Axis): Boolean {
+        return intern.add(Dependency(w, k, axis).packed)
     }
 
-    fun forEach(fn : (Dependency) -> Unit) {
+    fun contains(d: Dependency): Boolean {
+        return intern.contains(d.packed)
+    }
+
+    fun contains(w: Widget, k: DependencyKind, axis: Axis): Boolean {
+        return intern.contains(Dependency(w, k, axis).packed)
+    }
+
+    fun forEach(fn: (Dependency) -> Unit) {
         val iter = intern.iterator()
         while (iter.hasNext()) {
             fn(Dependency(iter.nextLong()))
@@ -184,7 +347,10 @@ class DependencySet(initialSize: Int = 1024) {
 """
     }
 
-    val size get() : Int { return intern.size }
+    val size
+        get() : Int {
+            return intern.size
+        }
 }
 
 data class NineWayImage(
@@ -195,21 +361,34 @@ data class NineWayImage(
     var drawEdges: Bindable<Boolean> = ValueBindable.True,
     var color: Bindable<RGBA?> = ValueBindable.Null(),
     var edgeColor: Bindable<RGBA?> = ValueBindable.Null(),
-)
+) : FromConfig {
+    override fun readFromConfig(cv: ConfigValue) {
+        cv["scale"].asInt()?.let { scale = it }
+        cv["draw"]?.let{ draw = bindableBool(it) }
+        cv["drawCenter"]?.let { drawCenter = bindableBool(it) }
+        cv["drawEdges"]?.let { drawEdges = bindableBool(it) }
+        cv["color"]?.let { color = bindableRGBA(it) }
+        cv["edgeColor"]?.let { edgeColor = bindableRGBA(it) }
+        cv["image"]?.let { image = bindableImage(it) }
+    }
+}
 
-class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : WidgetIdentifier {
+class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : WidgetIdentifier, FromConfig {
     init {
         parent?.addChild(this)
     }
+
     var identifier: String? = null
+    var archetype: String? = null
     val entity: Entity = windowingSystem.world.createEntity()
     private var childrenI: MutableList<Widget>? = null
-    val children : List<Widget> get() {
-        if (childrenI != null && childSortNeeded) {
-            childrenI!!.sortBy { c -> -c.resZ }
+    val children: List<Widget>
+        get() {
+            if (childrenI != null && childSortNeeded) {
+                childrenI!!.sortBy { c -> -c.resZ }
+            }
+            return childrenI ?: emptyList()
         }
-        return childrenI ?: emptyList()
-    }
     private var childSortNeeded = false
     private fun addChild(w: Widget) {
         if (childrenI == null) {
@@ -218,35 +397,111 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         childrenI!!.add(w)
         childSortNeeded = true
     }
+    fun removeChild(w: Widget) {
+        childrenI?.remove(w)
+    }
 
     internal var dependents = mutableSetOf<Dependent>()
 
-    internal var positionI = Vec3(WidgetPosition.Fixed(0), WidgetPosition.Fixed(0), WidgetPosition.Absolute(0))
-    internal var dimensionsI = Vec2<WidgetDimensions>(WidgetDimensions.Fixed(100), WidgetDimensions.Fixed(100))
+    internal var position = Vec3(WidgetPosition.Fixed(0), WidgetPosition.Fixed(0), WidgetPosition.Absolute(0))
+        private set
+    internal var dimensions = Vec2<WidgetDimensions>(WidgetDimensions.Intrinsic(), WidgetDimensions.Intrinsic())
+        private set
+
     var padding = Vec3i()
 
-    var showing : Bindable<Boolean> = ValueBindable.True
+    var showing: Bindable<Boolean> = ValueBindable.True
+        set(b) {
+            if (b != field) {
+                markForFullUpdate()
+            }
+            field = b
+        }
     var resolvedPosition = Vec3i()
     var resolvedPartialPosition = Vec3i()
     var resolvedDimensions = Vec2i()
     var resolvedClientOffset = Vec3i()
 
     val bindings = mutableMapOf<String, Any>()
-    var eventCallbacks : List<(DisplayEvent) -> Boolean> = emptyList()
+    var eventCallbacks: List<(DisplayEvent) -> Boolean> = emptyList()
 
     var destroyed: Boolean = false
 
+    override fun readFromConfig(cv: ConfigValue) {
+        WidgetPosition(cv["x"])?.let { x = it }
+        WidgetPosition(cv["y"])?.let { y = it }
+        WidgetPosition(cv["z"])?.let { z = it }
+
+        if (cv["type"].asStr() == "div") {
+            width = WidgetDimensions.WrapContent
+            height = WidgetDimensions.WrapContent
+        }
+
+        WidgetDimensions(cv["width"])?.let { width = it }
+        WidgetDimensions(cv["height"])?.let { height = it }
+
+        background.readFromConfig(cv["background"])
+
+        cv["showing"]?.let { showing = bindableBool(it) }
+
+        cv["padding"].asVec3i()?.let { padding = it }
+    }
+
+    /**
+     * Copies the raw configuration from the source widget, but not in memory state like
+     * resolved position, dependencies, parents, etc
+     */
+    fun copyFrom(w : Widget) {
+        x = w.x
+        y = w.y
+        z = w.z
+        width = w.width
+        height = w.height
+        background = w.background.copy()
+        overlay = w.overlay?.copy()
+        showing = w.showing.copyBindable()
+        padding = w.padding
+    }
+
+
+    // +============================================================================+
+    // |                            Binding                                         |
+    // +============================================================================+
+    fun bind(k : String, v : Any?) {
+        if (bindings[k] != v) {
+            if (v != null) {
+                bindings[k] = v
+            } else {
+                bindings.remove(k)
+            }
+            markForUpdate(Bindings)
+        }
+    }
+
+    fun bind(pair : Pair<String, Any?>) {
+        bind(pair.first, pair.second)
+    }
+
+    fun unbind(k : String) {
+        if (bindings.remove(k) != null) {
+            markForUpdate(Bindings)
+        }
+    }
+
+    fun buildBindingContext() : BindingContext {
+        return BindingContext(bindings, parent?.buildBindingContext())
+    }
 
     // +============================================================================+
     // |                            Drawing                                         |
     // +============================================================================+
 
-    val background = NineWayImage(bindable(ImagePath("arx/ui/minimalistBorder.png")))
-    val overlay : NineWayImage? = null
+    var background = NineWayImage(bindable(ImagePath("arx/ui/minimalistBorder.png")))
+    var overlay: NineWayImage? = null
 
 
     val quads = mutableListOf<WQuad>()
-    var bounds = Recti(0,0,0,0)
+    var bounds = Recti(0, 0, 0, 0)
 
     // +============================================================================+
     // |                            Access                                          |
@@ -256,30 +511,112 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         windowingSystem.markForUpdate(this, d)
     }
 
-    fun position(axis: Axis) : WidgetPosition { return positionI[axis] }
-    fun dimensions(axis: Axis) : WidgetDimensions { return dimensionsI[axis] }
-    fun dimensions(axis: Axis2D) : WidgetDimensions { return dimensionsI[axis] }
-    fun clientOffset(axis: Axis) : Int { return resolvedClientOffset[axis] + padding[axis] }
+    fun markForFullUpdate() {
+        windowingSystem.markForFullUpdate(this)
+    }
 
-    var x : WidgetPosition get() { return positionI.x } set(v) { markForUpdate(PositionX); positionI.x = v }
-    var y : WidgetPosition get() { return positionI.y } set(v) { markForUpdate(PositionY); positionI.y = v }
-    var z : WidgetPosition get() { return positionI.z } set(v) { markForUpdate(PositionZ); positionI.z = v }
+    fun position(axis: Axis): WidgetPosition {
+        return position[axis]
+    }
 
-    var width : WidgetDimensions get() { return dimensionsI.x } set(v) { markForUpdate(DimensionsX); dimensionsI.x = v }
-    var height : WidgetDimensions get() { return dimensionsI.y } set(v) { markForUpdate(DimensionsY); dimensionsI.y = v }
+    fun dimensions(axis: Axis): WidgetDimensions {
+        return dimensions[axis]
+    }
+
+    fun dimensions(axis: Axis2D): WidgetDimensions {
+        return dimensions[axis]
+    }
+
+    fun clientOffset(axis: Axis): Int {
+        return resolvedClientOffset[axis] + padding[axis]
+    }
+
+    var x: WidgetPosition
+        get() {
+            return position.x
+        }
+        set(v) {
+            if (position.x != v) {
+                markForUpdate(PositionX); position.x = v
+            }
+        }
+    var y: WidgetPosition
+        get() {
+            return position.y
+        }
+        set(v) {
+            if (position.y != v) {
+                markForUpdate(PositionY); position.y = v
+            }
+        }
+    var z: WidgetPosition
+        get() {
+            return position.z
+        }
+        set(v) {
+            if (position.z != v) {
+                markForUpdate(PositionZ); position.z = v
+            }
+        }
+
+    var width: WidgetDimensions
+        get() {
+            return dimensions.x
+        }
+        set(v) {
+            if (dimensions.x != v) {
+                markForUpdate(DimensionsX); dimensions.x = v
+            }
+        }
+    var height: WidgetDimensions
+        get() {
+            return dimensions.y
+        }
+        set(v) {
+            if (dimensions.y != v) {
+                markForUpdate(DimensionsY); dimensions.y = v
+            }
+        }
 
 
-    val resX : Int get() { return resolvedPosition.x }
-    val resY : Int get() { return resolvedPosition.y }
-    val resClientX : Int get() { return resolvedPosition.x + clientOffset(Axis.X) }
-    val resClientY : Int get() { return resolvedPosition.y + clientOffset(Axis.Y) }
-    val resZ : Int get() { return resolvedPosition.z }
-    val resWidth : Int get() { return resolvedDimensions.x }
-    val resHeight : Int get() { return resolvedDimensions.y }
-    val resClientWidth : Int get() { return resolvedDimensions.x - clientOffset(Axis.X) * 2 }
-    val resClientHeight : Int get() { return resolvedDimensions.y - clientOffset(Axis.Y) * 2 }
+    val resX: Int
+        get() {
+            return resolvedPosition.x
+        }
+    val resY: Int
+        get() {
+            return resolvedPosition.y
+        }
+    val resClientX: Int
+        get() {
+            return resolvedPosition.x + clientOffset(Axis.X)
+        }
+    val resClientY: Int
+        get() {
+            return resolvedPosition.y + clientOffset(Axis.Y)
+        }
+    val resZ: Int
+        get() {
+            return resolvedPosition.z
+        }
+    val resWidth: Int
+        get() {
+            return resolvedDimensions.x
+        }
+    val resHeight: Int
+        get() {
+            return resolvedDimensions.y
+        }
+    val resClientWidth: Int
+        get() {
+            return resolvedDimensions.x - clientOffset(Axis.X) * 2
+        }
+    val resClientHeight: Int
+        get() {
+            return resolvedDimensions.y - clientOffset(Axis.Y) * 2
+        }
 
-    operator fun <T : EntityData> get (dt: DataType<T>) : T? {
+    operator fun <T : EntityData> get(dt: DataType<T>): T? {
         return windowingSystem.world.data(entity, dt)
     }
 
@@ -287,7 +624,7 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         windowingSystem.world.attachData(entity, t)
     }
 
-    fun addDependent(dep : Dependent) {
+    fun addDependent(dep: Dependent) {
         dependents.add(dep)
     }
 
@@ -305,17 +642,56 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         eventCallbacks = eventCallbacks + stmt
     }
 
-    override fun toWidget(): Widget {
+    fun descendantWithIdentifier(ident: String): Widget? {
+        for (c in children) {
+            if (c.identifier == ident) {
+                return c
+            }
+        }
+
+        for (c in children) {
+            val d = c.descendantWithIdentifier(ident)
+            if (d != null) {
+                return d
+            }
+        }
+        return null
+    }
+
+    override fun toWidget(context: Widget): Widget {
         return this
     }
 
     override fun toString(): String {
         return "Widget(${identifier ?: entity.id})"
     }
+
+    fun destroy() {
+        destroyed = true
+        windowingSystem.destroyWidget(this)
+    }
+
+
+}
+
+
+data class WidgetArchetype (val data : List<EntityData>, val widgetData: Widget, val children : Map<String, WidgetArchetype>) {
+    val copyFunctions = data.map { it.javaClass.kotlin.functions.find { f -> f.name == "copy" } }
+    fun copyData() : List<EntityData> {
+        return data.indices.mapNotNull { i ->
+            val f = copyFunctions[i]
+            if (f == null) {
+                Noto.recordError("WidgetArchetype made use of data type with no copy function : ${data[i].javaClass.simpleName}")
+                null
+            } else {
+                f.callBy(mapOf(f.instanceParameter!! to data[i])) as EntityData
+            }
+        }
+    }
 }
 
 inline fun <reified T : DisplayEvent> Widget.onEvent(crossinline stmt: (T) -> Boolean) {
-    val callback = { d : DisplayEvent ->
+    val callback = { d: DisplayEvent ->
         if (d is T) {
             stmt(d)
         } else {
@@ -326,7 +702,7 @@ inline fun <reified T : DisplayEvent> Widget.onEvent(crossinline stmt: (T) -> Bo
 }
 
 inline fun <reified T : DisplayEvent> Widget.onEventDo(crossinline stmt: (T) -> Unit) {
-    val callback = { d : DisplayEvent ->
+    val callback = { d: DisplayEvent ->
         if (d is T) {
             stmt(d)
         }
@@ -336,13 +712,12 @@ inline fun <reified T : DisplayEvent> Widget.onEventDo(crossinline stmt: (T) -> 
 }
 
 
-
 fun isFarSide(axis: Axis, orientation: WidgetOrientation): Boolean {
     return (axis == Axis.X && (orientation == WidgetOrientation.TopRight || orientation == WidgetOrientation.BottomRight)) ||
             (axis == Axis.Y && (orientation == WidgetOrientation.BottomRight || orientation == WidgetOrientation.BottomLeft))
 }
 
-internal fun oppositeAxis(axis: Axis) : Axis {
+internal fun oppositeAxis(axis: Axis): Axis {
     return when (axis) {
         Axis.X -> Axis.Y
         Axis.Y -> Axis.X
@@ -351,7 +726,7 @@ internal fun oppositeAxis(axis: Axis) : Axis {
 }
 
 
-inline fun forEachPositionDep(w: Widget, axis: Axis, fn : (Widget, DependencyKind, Axis) -> Unit) {
+inline fun forEachPositionDep(w: Widget, axis: Axis, fn: (Widget, DependencyKind, Axis) -> Unit) {
     w.parent?.let { parent ->
         val p = w.position(axis)
 
@@ -376,7 +751,7 @@ inline fun forEachPositionDep(w: Widget, axis: Axis, fn : (Widget, DependencyKin
                 fn(parent, DependencyKind.Position, axis)
             }
             is WidgetPosition.Relative -> {
-                val rel = p.relativeTo.toWidget()
+                val rel = p.relativeTo.toWidget(w)
                 if (rel != null) {
                     fn(rel, DependencyKind.Position, axis)
                     if (isFarSide(axis, p.targetAnchor) || p.targetAnchor == WidgetOrientation.Center) {
@@ -394,11 +769,16 @@ inline fun forEachPositionDep(w: Widget, axis: Axis, fn : (Widget, DependencyKin
                     fn(w, DependencyKind.Dimensions, axis)
                 }
             }
+            is WidgetPosition.Pixel -> {
+                if (isFarSide(axis, p.anchorTo) || p.anchorTo == WidgetOrientation.Center) {
+                    fn(w, DependencyKind.Dimensions, axis)
+                }
+            }
         }
     }
 }
 
-internal inline fun forEachDimensionDep(w: Widget, axis: Axis, fn : (Widget, DependencyKind, Axis) -> Unit) {
+internal inline fun forEachDimensionDep(w: Widget, axis: Axis, fn: (Widget, DependencyKind, Axis) -> Unit) {
     w.parent?.let { parent ->
         if (axis == Axis.X || axis == Axis.Y) {
             val d = w.dimensions(axis)
@@ -422,7 +802,7 @@ internal inline fun forEachDimensionDep(w: Widget, axis: Axis, fn : (Widget, Dep
                     }
                 }
                 is WidgetDimensions.ExpandTo -> {
-                    val expandTo = d.expandTo.toWidget()
+                    val expandTo = d.expandTo.toWidget(w)
                     if (expandTo != null) {
                         fn(expandTo, DependencyKind.Position, axis)
                         fn(expandTo, DependencyKind.Dimensions, axis)

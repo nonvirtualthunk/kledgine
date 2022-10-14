@@ -293,4 +293,9 @@ object Noto {
     fun err(str: String) {
         println("[error] $str")
     }
+
+    fun <T> errAndReturn(str: String, t : T) : T {
+        println("[error] $str")
+        return t
+    }
 }

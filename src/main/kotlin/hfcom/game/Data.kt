@@ -7,6 +7,7 @@ import arx.engine.*
 import arx.game.core.SimpleLibrary
 import com.typesafe.config.ConfigValue
 import hfcom.display.MapCoord
+import kotlin.math.roundToInt
 
 
 /**
@@ -34,6 +35,7 @@ data class CombatStats(
         defence = cv["defence"].asInt() ?: 0,
         encumbrance = cv["encumbrance"].asInt() ?: 0,
         protection = cv["protection"].asInt() ?: 0,
+        maxHP = cv["maxHP"].asInt() ?: 0,
         flags = cv["flags"].map { k, v ->
             if (v.isBool()) {
                 t(k) to if (v.asBool() == true) {
@@ -162,6 +164,8 @@ operator fun FlagData?.unaryPlus(): FlagData {
     return this ?: FlagData.defaultInstance
 }
 
+data class StatsChange(val stats: CombatStats, val endCondition : Taxon)
+
 
 data class CharacterData(
     var hpLost: Int = 0,
@@ -174,6 +178,8 @@ data class CharacterData(
     var faction: Taxon = t("Factions.Enemy"),
     var classLevels: List<CharacterClassLevel> = listOf(),
     var activeAction: ActionIdentifier? = null,
+    var statsChanges: List<StatsChange> = emptyList(),
+    var dead : Boolean = false
 ) : GameData {
     companion object : DataType<CharacterData>(CharacterData())
 
@@ -236,9 +242,21 @@ sealed interface ActionIdentifier {
 
 sealed interface Effect {
     fun defaultTarget(): TargetKind
+
+    fun isValidTarget(world: GameWorld, actor: Entity, target: EffectTarget): Boolean
+
     data class AttackEffect(val attack: Attack) : Effect {
         override fun defaultTarget(): TargetKind {
             return TargetKind.Enemy
+        }
+
+        override fun isValidTarget(world: GameWorld, actor: Entity, target: EffectTarget): Boolean {
+            with(world) {
+                when (target) {
+                    is EffectTarget.Entity -> return isEnemy(actor, target.entity)
+                    else -> return false
+                }
+            }
         }
     }
 
@@ -246,11 +264,43 @@ sealed interface Effect {
         override fun defaultTarget(): TargetKind {
             return TargetKind.Self
         }
+
+        override fun isValidTarget(world: GameWorld, actor: Entity, target: EffectTarget): Boolean {
+            return when (target) {
+                is EffectTarget.Entity -> true
+                else -> false
+            }
+        }
+    }
+
+    object Move : Effect {
+        override fun defaultTarget(): TargetKind {
+            return TargetKind.Tile
+        }
+
+        override fun isValidTarget(world: GameWorld, actor: Entity, target: EffectTarget): Boolean {
+            with(world) {
+                return when (target) {
+                    is EffectTarget.Tile -> {
+                        actor[Physical]?.let { pd -> pathfinder(world, actor).findPath(pd.position, Pathfinder.SingleDestination(target.at), target.at) } != null
+                    }
+                    else -> false
+                }
+            }
+        }
+
+        override fun toString(): String {
+            return "Move"
+        }
     }
 
     object NoOp : Effect {
         override fun defaultTarget(): TargetKind {
             return TargetKind.Self
+        }
+
+        override fun isValidTarget(world: GameWorld, actor: Entity, target: EffectTarget): Boolean {
+            return false
         }
     }
 
@@ -273,7 +323,8 @@ sealed interface Effect {
 
 enum class TargetKind {
     Self,
-    Enemy;
+    Enemy,
+    Tile;
 
     companion object : FromConfigCreator<TargetKind> {
         override fun createFromConfig(cv: ConfigValue?): TargetKind? {
@@ -283,10 +334,20 @@ enum class TargetKind {
             return when (cv.asStr()?.lowercase()) {
                 "self" -> Self
                 "enemy" -> Enemy
+                "tile" -> Tile
                 else -> null
             }
         }
     }
+}
+
+
+sealed interface EffectTarget {
+    data class Entity(val entity: arx.engine.Entity) : EffectTarget
+
+    data class Tile(val at: MapCoord) : EffectTarget
+
+    data class Path(val path : Pathfinder.Path<MapCoord>) : EffectTarget
 }
 
 data class TargetedEffect(val effect: Effect, val target: TargetKind) {
@@ -296,6 +357,10 @@ data class TargetedEffect(val effect: Effect, val target: TargetKind) {
             val target = TargetKind.createFromConfig(cv["target"]) ?: eff.defaultTarget()
             return TargetedEffect(eff, target)
         }
+    }
+
+    fun isValidTarget(world: GameWorld, actor: Entity, target: EffectTarget): Boolean {
+        return effect.isValidTarget(world, actor, target)
     }
 }
 
@@ -312,6 +377,7 @@ data class Action(
 }
 
 val NoOpAction = Action("No Action", listOf(), 1)
+val MoveAction = Action("Move", listOf(TargetedEffect(Effect.Move, TargetKind.Tile)), 0)
 
 data class Skill(
     val name: String,
@@ -340,6 +406,9 @@ fun GameWorld.effectiveCombatStats(ent: Entity): CombatStats {
         }
         for (cl in cd.classLevels) {
             ret += cl.combatStats
+        }
+        for (sc in cd.statsChanges) {
+            ret += sc.stats
         }
         ret
     }
@@ -383,7 +452,7 @@ operator fun Item?.unaryPlus(): Item {
 data class ItemType(
     val itemData: Item,
     val weaponData: Weapon?,
-    override var identity : Taxon
+    override var identity: Taxon
 ) : Identifiable {
     companion object : FromConfigCreator<ItemType> {
         override fun createFromConfig(cv: ConfigValue?): ItemType? {
@@ -399,7 +468,7 @@ data class ItemType(
     }
 }
 
-fun GameWorld.createItem(itemType : ItemType, implicitItem: Boolean = false): Entity {
+fun GameWorld.createItem(itemType: ItemType, implicitItem: Boolean = false): Entity {
     val ent = createEntity()
     ent.attachData(itemType.itemData.copy(implicitItem = implicitItem))
     ent.attachData(Identity(identity = itemType.identity))
@@ -431,6 +500,24 @@ data class Attack(
             )
         }
     }
+}
+
+data class AttackSummary(
+    val attack : Attack,
+    val hitFraction : Float,
+    val minDamage : Int,
+    val maxDamage : Int,
+    val range : Int
+) {
+    val hitPercentDisplay : String get() { return (hitFraction * 100.0).roundToInt().toString() }
+    val damageRangeDisplay : String get() {
+        return if (minDamage != maxDamage) {
+            "$minDamage - $maxDamage"
+        } else {
+            "$minDamage"
+        }
+    }
+
 }
 
 data class Weapon(
@@ -578,6 +665,7 @@ data class Tile(
 data class TacticalMap(
     var tiles: FiniteGrid2D<Tile> = FiniteGrid2D(Vec2i(128, 128), Tile()),
     var groundLevel: Int = 2, // purely a display convenience, represents the baseline expected depth of terrain
+    var activeFaction: Taxon = t("Factions.Player")
 
 ) : GameData {
     companion object : DataType<TacticalMap>(TacticalMap())

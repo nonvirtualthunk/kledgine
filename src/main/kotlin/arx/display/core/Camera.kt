@@ -21,10 +21,23 @@ interface Camera {
 
     fun update() : Boolean
 
-    fun unproject(p : Vec2f) : Vec2f {
+    /**
+     * Convert from a pixel position within the window to game-world units defined by this camera
+     */
+    fun unproject(pixelPosition : Vec2f) : Vec2f {
+        val p = pixelPosition
         val screenSpace = Float4((p.x / Application.windowSize.x) * 2.0f - 1.0f, ((Application.windowSize.y - p.y - 1) / Application.windowSize.y) * 2.0f - 1.0f, 0.0f, 1.0f)
         val res = inverse(projectionMatrix() * modelviewMatrix()).times(screenSpace)
         return Vec2f(res.x, res.y)
+    }
+
+    /**
+     * Convert from a game-world coordinate to pixel position within the window
+     */
+    fun project(p : Vec3f) : Vec2f {
+        val res = (projectionMatrix() * modelviewMatrix()).times(Float4(p.x, p.y, p.z, 1.0f))
+        val screenSpace = Vec2f((res.x * 0.5f + 0.5f) * Application.windowSize.x, (1.0f - (res.y * 0.5f + 0.5f)) * Application.windowSize.y)
+        return screenSpace
     }
 }
 

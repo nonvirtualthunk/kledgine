@@ -89,6 +89,19 @@ class MapCoord(x : Int, y : Int, z : Int) : Vec3i(x,y,z) {
     override fun toString(): String {
         return "MapCoord($x, $y, $z)"
     }
+
+    fun adjacent2D() : Iterator<MapCoord2D> {
+        return iterator {
+            yield(MapCoord2D(x-1,y))
+            yield(MapCoord2D(x+1,y))
+            yield(MapCoord2D(x,y-1))
+            yield(MapCoord2D(x,y+1))
+        }
+    }
+
+    operator fun plus (mc : MapCoord) : MapCoord {
+        return MapCoord(x + mc.x, y + mc.y, z + mc.z)
+    }
 }
 
 class MapCoordf(x : Float, y : Float, z : Float) : Vec3f(x,y,z) {

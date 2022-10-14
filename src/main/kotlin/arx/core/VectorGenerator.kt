@@ -33,7 +33,8 @@ fun main() {
     for (dt in dataTypes) {
         for (arity in arities) {
             val baseTypeName = "Vec$arity${dt.suffix}"
-            val typeNames = if (arity == 4 && dt.type == "UByte") { listOf("RGBA", baseTypeName) } else { listOf(baseTypeName) }
+//            val typeNames = if (arity == 4 && dt.type == "UByte") { listOf("RGBA", baseTypeName) } else { listOf(baseTypeName) }
+            val typeNames = listOf(baseTypeName)
             for (typeName in typeNames) {
 
                 val (floatType, floatSuffix) = if (dt.type == "Double") {
@@ -206,7 +207,7 @@ fun main() {
                     |    if (this === other) return true
                     |    if (javaClass != other?.javaClass) return false
                     |
-                    |    other as $baseTypeName
+                    |    other as $typeName
                     |    
                     |    return $piecewiseEquality
                     |}

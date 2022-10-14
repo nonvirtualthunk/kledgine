@@ -6,9 +6,9 @@ import arx.display.core.Key
 import arx.display.core.KeyModifiers
 import arx.display.core.MouseButton
 import arx.display.windowing.RecalculationFlag.*
-import arx.display.windowing.components.BackgroundComponent
-import arx.display.windowing.components.TextWindowingComponent
+import arx.display.windowing.components.*
 import arx.engine.*
+import com.typesafe.config.ConfigValue
 import dev.romainguy.kotlin.math.Float4
 import dev.romainguy.kotlin.math.Mat4
 import dev.romainguy.kotlin.math.inverse
@@ -31,12 +31,14 @@ data class WidgetKeyPressEvent(override val widgets: MutableList<Widget>, val ke
 data class WidgetKeyRepeatEvent(override val widgets: MutableList<Widget>, val key: Key, val mods: KeyModifiers, val from: KeyRepeatEvent) : WidgetEvent(from)
 data class WidgetMousePressEvent(override val widgets: MutableList<Widget>, val position: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MousePressEvent) : WidgetEvent(from)
 data class WidgetMouseReleaseEvent(override val widgets: MutableList<Widget>, val position: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MouseReleaseEvent) : WidgetEvent(from)
+data class WidgetMouseEnterEvent(override val widgets: MutableList<Widget>, val from: MouseMoveEvent) : WidgetEvent(from)
+data class WidgetMouseExitEvent(override val widgets: MutableList<Widget>, val from: MouseMoveEvent) : WidgetEvent(from)
 data class WidgetMouseMoveEvent(override val widgets: MutableList<Widget>, val position: Vec2f, val delta: Vec2f, val mods: KeyModifiers, val from: MouseMoveEvent) : WidgetEvent(from)
 data class WidgetMouseDragEvent(override val widgets: MutableList<Widget>, val position: Vec2f, val delta: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MouseDragEvent) : WidgetEvent(from)
 
 
 interface WindowingComponent {
-    fun registerDataTypes(world: World) {}
+    fun dataTypes() : List<DataType<EntityData>> { return emptyList() }
     fun intrinsicSize(w: Widget, axis: Axis2D, minSize: Vec2i, maxSize: Vec2i): Int? {
         return null
     }
@@ -50,27 +52,55 @@ interface WindowingComponent {
     }
 
     fun handleEvent(w: Widget, event: DisplayEvent) : Boolean { return false }
+
+    fun updateBindings(ws: WindowingSystem, w: Widget, ctx: BindingContext) {}
 }
 
-class WindowingSystem {
+class WindowingSystem : DisplayData, CreateOnAccessData {
+    companion object : DataType<WindowingSystem>({ WindowingSystem() }, sparse = true)
+    override fun dataType(): DataType<*> {
+        return WindowingSystem
+    }
+
+
     val world = World()
-    val desktop = Widget(this, null).apply { identifier = "Desktop" }
+    val desktop = Widget(this, null).apply {
+        identifier = "Desktop"
+        background.image = bindable(Resources.image("ui/fancyBackground.png"))
+        background.drawCenter = ValueBindable.False
+    }
     val widgets = mutableMapOf(desktop.entity.id to desktop)
     var focusedWidget : Widget? = null
+    var lastWidgetUnderMouse : Widget = desktop
     var scale = 3
+    val configLoadableDataTypes = mutableListOf<DataType<EntityData>>()
+    val archetypes = mutableMapOf<String, WidgetArchetype>()
 
     var pendingUpdates = mutableMapOf<Widget, EnumSet<RecalculationFlag>>(desktop to EnumSet.allOf(RecalculationFlag::class.java))
 
     private var components = mutableListOf<WindowingComponent>()
 
     fun registerComponent(c: WindowingComponent) {
+        if (components.contains(c)) { return }
+
         components.add(c)
-        c.registerDataTypes(world)
+        c.dataTypes().forEach { dt ->
+            if (dt !is FromConfigCreator<*>) {
+                Noto.recordError("DataType registered with windowing system that is not creatable from config",
+                    mapOf("dataType" to dt, "component" to c.javaClass.simpleName))
+            } else {
+                configLoadableDataTypes.add(dt)
+            }
+
+            world.register(dt)
+        }
     }
 
     fun registerStandardComponents() {
         registerComponent(BackgroundComponent)
+        registerComponent(ListWidgetComponent)
         registerComponent(TextWindowingComponent)
+        registerComponent(ImageDisplayWindowingComponent)
     }
 
     fun createWidget(): Widget {
@@ -84,6 +114,68 @@ class WindowingSystem {
         return w
     }
 
+    fun destroyWidget(w: Widget) {
+        widgets.remove(w.entity.id)
+        if (focusedWidget == w) {
+            focusedWidget = null
+        }
+        pendingUpdates.remove(w)
+        w.parent?.apply {
+            removeChild(w)
+            markForFullUpdate()
+        }
+        world.destroyEntity(w.entity)
+    }
+
+    fun loadArchetype(cv: ConfigValue) : WidgetArchetype {
+        val stylesheet = Resources.config("display/widgets/Stylesheet.sml")
+
+        val data = configLoadableDataTypes.mapNotNull { dt ->
+            (dt as FromConfigCreator<*>).createFromConfig(cv) as EntityData?
+        }
+        val widgetHolder = Widget(this, null)
+        widgetHolder.readFromConfig(stylesheet.root())
+        widgetHolder.readFromConfig(cv)
+
+        val children = cv["children"].map { k, v -> k to loadArchetype(v) }
+
+        return WidgetArchetype(data, widgetHolder, children)
+    }
+
+    fun createWidget(archetype: String): Widget {
+        return createWidget(desktop, archetype)
+    }
+
+    fun createWidget(parent : Widget, archetype: String): Widget {
+        val arch = archetypes.getOrPut(archetype) {
+            val path = archetype.substringBeforeLast('.')
+            val widgetName = archetype.substringAfterLast('.')
+            val conf = Resources.config("display/widgets/$path.sml")
+            val cv = conf[widgetName]
+            if (cv != null) {
+                loadArchetype(cv)
+            } else {
+                Noto.recordError("Invalid widget archetype (no config)", mapOf("archetype" to archetype))
+                WidgetArchetype(emptyList(), Widget(this, null), mapOf())
+            }
+        }
+        return createWidget(parent, arch)
+    }
+
+    fun createWidget(parent : Widget, arch: WidgetArchetype): Widget {
+        val w = createWidget(parent)
+
+        arch.copyData().forEach { d -> w.attachData(d) }
+        w.copyFrom(arch.widgetData)
+
+        for ((childIdent, childArch) in arch.children) {
+            val newChild = createWidget(w, childArch)
+            newChild.identifier = childIdent
+        }
+
+        return w
+    }
+
     fun markForUpdate(w: Widget, r: RecalculationFlag) {
         pendingUpdates.getOrPut(w) { EnumSet.noneOf(RecalculationFlag::class.java) }.add(r)
     }
@@ -93,27 +185,53 @@ class WindowingSystem {
     }
 
     fun updateDrawData(w: Widget, bounds: Recti, needsRerender: Set<Widget>) {
-        w.bounds = bounds
-        if (needsRerender.contains(w)) {
-            w.quads.clear()
-            for (comp in components) {
-                comp.render(this, w, bounds, w.quads)
+        if (w.showing()) {
+            w.bounds = bounds
+            if (needsRerender.contains(w)) {
+                w.quads.clear()
+                for (comp in components) {
+                    comp.render(this, w, bounds, w.quads)
+                }
             }
-        }
 
-        val cx = w.clientOffset(Axis.X)
-        val cy = w.clientOffset(Axis.Y)
-        val newBounds = bounds.intersect(Recti(w.resX + cx, w.resY + cy, w.resWidth - cx * 2, w.resHeight - cy * 2))
-        for (c in w.children) {
-            updateDrawData(c, newBounds, needsRerender)
+            val cx = w.clientOffset(Axis.X)
+            val cy = w.clientOffset(Axis.Y)
+            val newBounds = bounds.intersect(Recti(w.resX + cx, w.resY + cy, w.resWidth - cx * 2, w.resHeight - cy * 2))
+            for (c in w.children) {
+                updateDrawData(c, newBounds, needsRerender)
+            }
+        } else{
+            w.quads.clear()
         }
     }
 
+    fun recursivelyUpdateBindings(w : Widget, ctx: BindingContext, finishedSet: ObjectOpenHashSet<Widget>) {
+        if (finishedSet.add(w)) {
+            for (comp in components) {
+                comp.updateBindings(this, w, ctx)
+            }
+            for (child in w.children) {
+                recursivelyUpdateBindings(child, BindingContext(child.bindings, ctx), finishedSet)
+            }
+        }
+    }
 
     fun updateGeometry(size: Vec2i): Boolean {
         updateDesktop(size)
 
         updateDependentRelationships()
+
+
+        val finishedBindingUpdates = ObjectOpenHashSet<Widget>()
+        val bindingsToUpdate = mutableListOf<Widget>()
+        for ((w, update) in pendingUpdates) {
+            if (update.contains(Bindings)) {
+                bindingsToUpdate.add(w)
+            }
+        }
+        for (w in bindingsToUpdate) {
+            recursivelyUpdateBindings(w, w.buildBindingContext(), finishedBindingUpdates)
+        }
 
         val requireRerender = ObjectOpenHashSet<Widget>()
         val requiredUpdates = recursivelyCollectRequiredDependencies(requireRerender)
@@ -178,14 +296,14 @@ class WindowingSystem {
         if (completedUpdates.add(w, DependencyKind.PartialPosition, axis) && requiredUpdates.contains(w, DependencyKind.PartialPosition, axis)) {
             // only the top level Desktop widget should have no parent, it is handled differently, so only
             // process for parent'd widgets
-            w.parent?.let { parent ->
+            w.parent?.let { _ ->
                 val pos = w.position(axis)
                 w.resolvedPartialPosition[axis] = when (pos) {
                     is WidgetPosition.Fixed -> if (isFarSide(axis, pos.relativeTo)) 0 else pos.offset
                     is WidgetPosition.Proportional -> 0
                     is WidgetPosition.Centered -> 0
                     is WidgetPosition.Relative -> {
-                        val relativeWidget = pos.relativeTo.toWidget()
+                        val relativeWidget = pos.relativeTo.toWidget(w)
                         if (relativeWidget != null) {
                             updatePartialPosition(relativeWidget, axis, requiredUpdates, completedUpdates, requireRerender)
                             val relativeAnchor = if (isFarSide(axis, pos.targetAnchor)) {
@@ -206,6 +324,7 @@ class WindowingSystem {
                         }
                     }
                     is WidgetPosition.Absolute -> pos.position
+                    is WidgetPosition.Pixel -> screenToW(pos.pixelPosition.toFloat())[axis].toInt()
                 }
             }
         }
@@ -214,10 +333,9 @@ class WindowingSystem {
     fun updatePosition(w: Widget, axis: Axis, requiredUpdates: DependencySet, completedUpdates: DependencySet, requireRerender: ObjectOpenHashSet<Widget>) {
         // only perform the update if we haven't already (completedUpdates) and an update is actually required (requiredUpdates)
         if (completedUpdates.add(w, DependencyKind.Position, axis) && requiredUpdates.contains(w, DependencyKind.Position, axis)) {
+            updateClientOffset(w, axis)
             w.parent?.let { parent ->
                 val pos = w.position(axis)
-
-                updateClientOffset(w, axis)
                 // everything other than absolute pixel positions and positions relative
                 // to widgets other than the parent require the parent's position
                 if (pos !is WidgetPosition.Absolute && pos !is WidgetPosition.Relative) {
@@ -267,7 +385,7 @@ class WindowingSystem {
                         parentV + (parentD - w.resolvedDimensions[axis]) / 2
                     }
                     is WidgetPosition.Relative -> {
-                        val relativeWidget = pos.relativeTo.toWidget()
+                        val relativeWidget = pos.relativeTo.toWidget(w)
                         if (relativeWidget != null) {
                             updatePosition(relativeWidget, axis, requiredUpdates, completedUpdates, requireRerender)
                             val relativeAnchor = if (isFarSide(axis, pos.targetAnchor)) {
@@ -298,6 +416,18 @@ class WindowingSystem {
                             pos.position
                         }
                     }
+                    is WidgetPosition.Pixel -> {
+                        val raw = screenToW(pos.pixelPosition.toFloat())[axis].toInt()
+                        if (pos.anchorTo == WidgetOrientation.Center) {
+                            updateDimensions(w, axis, requiredUpdates, completedUpdates, requireRerender)
+                            raw - w.resolvedDimensions[axis] / 2
+                        } else if (isFarSide(axis, pos.anchorTo)) {
+                            updateDimensions(w, axis, requiredUpdates, completedUpdates, requireRerender)
+                            raw - w.resolvedDimensions[axis]
+                        } else {
+                            raw
+                        }
+                    }
                 }
                 if (newPos != w.resolvedPosition[axis]) {
                     w.resolvedPosition[axis] = newPos
@@ -316,6 +446,13 @@ class WindowingSystem {
         // only perform the update if we haven't already (completedUpdates) and an update is actually required (requiredUpdates)
         if (completedUpdates.add(w, DependencyKind.Dimensions, axis) && requiredUpdates.contains(w, DependencyKind.Dimensions, axis)) {
             w.parent?.let { parent ->
+                if (! w.showing()) {
+                    if (w.resolvedDimensions[axis] != 0) {
+                        w.resolvedDimensions[axis] = 0
+                        requireRerender.add(w)
+                    }
+                    return
+                }
 
                 updateClientOffset(w, axis)
 
@@ -335,7 +472,7 @@ class WindowingSystem {
                         parentD - dim.gap - relPos
                     }
                     is WidgetDimensions.ExpandTo -> {
-                        val expandTo = dim.expandTo.toWidget()
+                        val expandTo = dim.expandTo.toWidget(w)
                         if (expandTo != null) {
                             updatePosition(expandTo, axis, requiredUpdates, completedUpdates, requireRerender)
                             expandTo.resolvedPosition[axis] - w.resolvedPosition[axis] - dim.gap
@@ -353,7 +490,7 @@ class WindowingSystem {
                             max = max(c.resolvedPartialPosition[axis] + c.resolvedDimensions[axis], max)
                         }
 
-                        max(max - min, 0) + w.clientOffset(axis)
+                        max(max - min, 0) + w.clientOffset(axis) * 2
                     }
                     is WidgetDimensions.Intrinsic -> {
                         val minimums = Vec2i(0, 0)
@@ -534,6 +671,7 @@ class WindowingSystem {
             is MouseReleaseEvent -> WidgetMouseReleaseEvent(mutableListOf(), screenToW(event.position), event.button, event.mods, event)
             is MouseMoveEvent -> WidgetMouseMoveEvent(mutableListOf(), screenToW(event.position), event.delta, event.mods, event)
             is MouseDragEvent -> WidgetMouseDragEvent(mutableListOf(), screenToW(event.position), event.delta, event.button, event.mods, event)
+            is WidgetEvent -> event
             else -> null
         }
     }
@@ -546,12 +684,28 @@ class WindowingSystem {
     fun handleEvent(event : DisplayEvent) : Boolean {
         if (event.consumed) { return false }
 
+        when (event) {
+            is MouseMoveEvent -> {
+                val w = widgetUnderMouse(screenToW(event.position))
+                if (lastWidgetUnderMouse != w) {
+                    handleEvent(lastWidgetUnderMouse, WidgetMouseExitEvent(mutableListOf(lastWidgetUnderMouse), event))
+                    handleEvent(w, WidgetMouseEnterEvent(mutableListOf(w), event))
+                    lastWidgetUnderMouse = w
+                }
+            }
+        }
+
         val target = when (event) {
-            is MouseEvent -> widgetUnderMouse(screenToW(event.position))
+            is MouseEvent -> lastWidgetUnderMouse
             is KeyEvent -> focusedWidget ?: desktop
+            is WidgetEvent -> event.widget
             else -> focusedWidget ?: desktop
         }
 
         return handleEvent(target, mapEvent(event) ?: event)
+    }
+
+    fun fireEvent(event : DisplayEvent) {
+        world.fireEvent(event)
     }
 }

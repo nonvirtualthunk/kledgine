@@ -6,6 +6,7 @@ import arx.engine.DataType
 import arx.engine.DisplayData
 import arx.engine.EntityData
 import arx.engine.World
+import com.typesafe.config.ConfigValue
 import kotlin.math.max
 import kotlin.math.min
 
@@ -14,15 +15,26 @@ data class TextDisplay(
     var text: Bindable<RichText> = bindable(RichText()),
     var multiLine: Boolean = false
 ) : DisplayData {
-    companion object : DataType<TextDisplay>(TextDisplay())
+    companion object : DataType<TextDisplay>(TextDisplay()), FromConfigCreator<TextDisplay> {
+        override fun createFromConfig(cv: ConfigValue?): TextDisplay? {
+            return if (cv["text"] != null) {
+                TextDisplay(
+                    text = cv["text"].ifLet { bindableRichText(it) }.orElse { bindable(RichText()) },
+                    multiLine = cv["mutliLine"]?.asBool() ?: false
+                )
+            } else {
+                null
+            }
+        }
+    }
 
     override fun dataType(): DataType<*> {
         return TextDisplay
     }
-}
 
-operator fun TextDisplay?.unaryPlus(): TextDisplay {
-    return this ?: TextDisplay.defaultInstance
+    fun copy() : TextDisplay {
+        return TextDisplay(text = text.copyBindable(), multiLine = multiLine)
+    }
 }
 
 
@@ -32,8 +44,8 @@ object TextWindowingComponent : WindowingComponent {
         TextLayout.layout(it.first, it.second.position, it.second)
     }
 
-    override fun registerDataTypes(world: World) {
-        world.register(TextDisplay)
+    override fun dataTypes() : List<DataType<EntityData>> {
+        return listOf(TextDisplay)
     }
 
     override fun intrinsicSize(w: Widget, axis: Axis2D, minSize: Vec2i, maxSize: Vec2i): Int? {
@@ -56,10 +68,24 @@ object TextWindowingComponent : WindowingComponent {
                 position = Vec3i(squad.position.x.toInt(), squad.position.y.toInt(), 0),
                 dimensions = Vec2i(squad.dimensions.x.toInt(), squad.dimensions.y.toInt()),
                 image = squad.image,
-                color = squad.color,
+                color = squad.color ?: Black,
                 beforeChildren = true,
                 subRect = Rectf(0.0f, 1.0f, 1.0f, -1.0f)
             ))
+        }
+    }
+
+    override fun updateBindings(ws: WindowingSystem, w: Widget, ctx: BindingContext) {
+        val td = w[TextDisplay] ?: return
+
+        if (td.text.update(ctx)) {
+            w.markForUpdate(RecalculationFlag.Contents)
+            if (w.dimensions(Axis2D.X).isIntrinsic() ) {
+                w.markForUpdate(RecalculationFlag.DimensionsX)
+            }
+            if( w.dimensions(Axis2D.Y).isIntrinsic()) {
+                w.markForUpdate(RecalculationFlag.DimensionsY)
+            }
         }
     }
 }

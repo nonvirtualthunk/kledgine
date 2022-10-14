@@ -2,8 +2,6 @@ package arx.display.windowing.components
 
 import arx.core.*
 import arx.display.core.Image
-import arx.display.core.RGBA
-import arx.display.core.White
 import arx.display.windowing.*
 
 private data class ImageMetrics(
@@ -152,5 +150,29 @@ object BackgroundComponent : WindowingComponent {
     override fun render(ws: WindowingSystem, w: Widget, bounds: Recti, quadsOut: MutableList<WQuad>) {
         renderNineWay(w, w.background, true, quadsOut)
         w.overlay?.let { renderNineWay(w, it, false, quadsOut) }
+    }
+
+    override fun updateBindings(ws: WindowingSystem, w : Widget, ctx: BindingContext) {
+        val preClientOffsetsX = clientOffsetContribution(w, Axis2D.X)
+        val preClientOffsetsY = clientOffsetContribution(w, Axis2D.Y)
+        if (Bindable.updateBindableFields(w.background, ctx)) {
+            w.markForUpdate(RecalculationFlag.Contents)
+            if (preClientOffsetsX != clientOffsetContribution(w, Axis2D.X)) {
+                w.markForUpdate(RecalculationFlag.DimensionsX)
+                w.markForUpdate(RecalculationFlag.PositionX)
+            }
+            if (preClientOffsetsY != clientOffsetContribution(w, Axis2D.Y)) {
+                w.markForUpdate(RecalculationFlag.DimensionsY)
+                w.markForUpdate(RecalculationFlag.PositionY)
+            }
+        }
+        w.overlay?.let {
+            if (Bindable.updateBindableFields(it, ctx)) {
+                w.markForUpdate(RecalculationFlag.Contents)
+            }
+        }
+        if (w.showing.update(ctx)) {
+            w.markForFullUpdate()
+        }
     }
 }

@@ -5,6 +5,7 @@ import arx.core.*
 import arx.display.components.CameraComponent
 import arx.display.components.CameraID
 import arx.display.core.PixelCamera
+import arx.display.windowing.WindowingSystemComponent
 import arx.engine.*
 import hfcom.display.*
 import hfcom.game.*
@@ -53,6 +54,8 @@ object MapGeneratorComponent : GameComponent() {
             for (ent in entitiesWithData(CharacterData)) {
                 startMission(ent)
 
+                startTurn(ent)
+
                 ent.printAllData()
 
                 println(possibleActions(ent))
@@ -76,7 +79,7 @@ fun main() {
         .run(
             Engine(
                 mutableListOf(MapGeneratorComponent),
-                mutableListOf(AnimationComponent, CameraComponent, TacticalMapComponent)
+                mutableListOf(AnimationComponent, CameraComponent, TacticalMapComponent, WindowingSystemComponent)
             )
         )
 }

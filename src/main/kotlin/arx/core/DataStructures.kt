@@ -3,13 +3,13 @@ package arx.core
 import java.util.concurrent.atomic.AtomicLong
 
 
-private data class LRUCacheEntry<V>(val value: V, var lastAccessed : Long)
+private data class LRUCacheEntry<V>(val value: V, var lastAccessed: Long)
 
 open class LRUCache<K, V>(val maximumSize: Int, val targetLoadFactor: Float = 0.5f) {
-    private val entries : MutableMap<K,LRUCacheEntry<V>> = mutableMapOf()
+    private val entries: MutableMap<K, LRUCacheEntry<V>> = mutableMapOf()
     private val incrementor = AtomicLong(0)
 
-    fun getOrPut (k : K, f : (K) -> V) : V {
+    fun getOrPut(k: K, f: (K) -> V): V {
         val entry = entries.getOrPut(k) {
             LRUCacheEntry(f(k), 0L)
         }
@@ -26,14 +26,12 @@ open class LRUCache<K, V>(val maximumSize: Int, val targetLoadFactor: Float = 0.
     }
 }
 
-class LRULoadingCache<K, V>(maximumSize: Int, targetLoadFactor: Float, val loadingFunction: (K) -> V) : LRUCache<K,V>(maximumSize, targetLoadFactor) {
+class LRULoadingCache<K, V>(maximumSize: Int, targetLoadFactor: Float, val loadingFunction: (K) -> V) : LRUCache<K, V>(maximumSize, targetLoadFactor) {
 
-    fun getOrPut(k: K) : V {
+    fun getOrPut(k: K): V {
         return getOrPut(k, loadingFunction)
     }
 }
-
-
 
 
 //class Grid2D<T>(defaultValue : T, initialDimensions : Vec2i = Vec2i(128,128)) {
@@ -75,8 +73,8 @@ class LRULoadingCache<K, V>(maximumSize: Int, targetLoadFactor: Float, val loadi
 
 
 @Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
-class FiniteGrid2D<T>(val dimensions : Vec2i, private val defaultValue : T) {
-    private var data : Array<Any?> = arrayOfNulls(dimensions.x * dimensions.y)
+class FiniteGrid2D<T>(val dimensions: Vec2i, private val defaultValue: T) {
+    private var data: Array<Any?> = arrayOfNulls(dimensions.x * dimensions.y)
 
     operator fun set(x: Int, y: Int, v: T) {
         if (x < 0 || y < 0 || x >= dimensions.x || y >= dimensions.y) {
@@ -86,7 +84,7 @@ class FiniteGrid2D<T>(val dimensions : Vec2i, private val defaultValue : T) {
         }
     }
 
-    operator fun get(x: Int, y : Int) : T {
+    operator fun get(x: Int, y: Int): T {
         return if (x < 0 || y < 0 || x >= dimensions.x || y >= dimensions.y) {
             defaultValue
         } else {
@@ -94,8 +92,59 @@ class FiniteGrid2D<T>(val dimensions : Vec2i, private val defaultValue : T) {
         }
     }
 
-    inline operator fun get(v : Vec2i) : T {
+    fun getOrUpdate(x: Int, y: Int, fn: () -> T): T {
+        val raw = if (x < 0 || y < 0 || x >= dimensions.x || y >= dimensions.y) {
+            null
+        } else {
+            (data[x * dimensions.y + y] as T?)
+        }
+        return if (raw == null) {
+            val ret = fn()
+            this[x, y] = ret
+            ret
+        } else {
+            raw
+        }
+    }
+
+    inline operator fun get(v: Vec2i): T {
         return get(v.x, v.y)
     }
 
+}
+
+
+class Watcher<T>(val fn: () -> T) {
+    var previousValue: T? = null
+    var first = true
+    fun hasChanged(): Boolean {
+        val v = fn()
+        return if (first) {
+            previousValue = v
+            first = false
+            true
+        } else {
+            val ret = v != previousValue
+            previousValue = v
+            ret
+        }
+    }
+}
+
+
+class Watcher1<C, T>(val fn: C.() -> T) {
+    var previousValue: T? = null
+    var first = true
+    fun hasChanged(c : C): Boolean {
+        val v = c.fn()
+        return if (first) {
+            previousValue = v
+            first = false
+            true
+        } else {
+            val ret = v != previousValue
+            previousValue = v
+            ret
+        }
+    }
 }

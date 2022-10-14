@@ -15,9 +15,6 @@ internal class WorldTest {
         override fun dataType(): DataType<*> { return PhysicalDisplay }
     }
 
-    operator fun PhysicalDisplay?.unaryPlus() : PhysicalDisplay {
-        return this ?: PhysicalDisplay.defaultInstance
-    }
     fun WorldView.PhysicalDisplay(e : Entity, version: Long = DataContainer.LatestVersion) : PhysicalDisplay? {
         return this.data(e, PhysicalDisplay, version)
     }
@@ -30,10 +27,6 @@ internal class WorldTest {
     ) : GameData {
         companion object : DataType<Physical>(Physical())
         override fun dataType(): DataType<*> { return Physical }
-    }
-
-    operator fun Physical?.unaryPlus() : Physical {
-        return this?: Physical.defaultInstance
     }
 
     fun GameWorldView.Physical(e : Entity, version: Long = DataContainer.LatestVersion): Physical? {

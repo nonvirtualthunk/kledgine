@@ -50,11 +50,12 @@ value class Entity(val id: EntityId) {
         return "Entity($id)"
     }
 
-    fun toString(world: WorldT<EntityData>?) : String {
+    fun <T : EntityData>toString(world: WorldT<T>?) : String {
         return if (world != null) {
             with(world) {
-                this@Entity[Identity].ifLet {
-                    it.name ?: "${it.identity}(${this@Entity.id})"
+                this@Entity[Identity as DataType<T>].ifLet {
+                    val ident = it as Identity
+                    ident.name ?: "${ident.identity}(${this@Entity.id})"
                 }.orElse {
                     this@Entity.toString()
                 }
@@ -65,9 +66,15 @@ value class Entity(val id: EntityId) {
     }
 }
 
+fun GameWorld.prettyString(e : Entity) : String {
+    return e.toString(this)
+}
+
 interface EntityData {
     fun dataType() : DataType<*>
 }
+
+interface CreateOnAccessData
 
 interface GameData : EntityData {
 
@@ -78,7 +85,10 @@ interface DisplayData : EntityData {
 }
 
 @Suppress("LeakingThis")
-open class DataType<T>(val defaultInstance: T, val versioned: Boolean = false, val sparse: Boolean = false) {
+open class DataType<out T>(val creator: () -> T, val versioned: Boolean = false, val sparse: Boolean = false) {
+    val defaultInstance = creator()
+    constructor (di : T, versioned: Boolean = false, sparse : Boolean = false) : this({di}, versioned, sparse)
+
     val index = DataTypeIncrementor.getAndIncrement()
     init {
         DataTypesByClass[defaultInstance!!::class] = this
@@ -89,7 +99,9 @@ open class DataType<T>(val defaultInstance: T, val versioned: Boolean = false, v
     }
 }
 
-open class DisplayDataType<T>(defaultInst: T, versioned: Boolean) : DataType<T>(defaultInst, versioned)
+open class DisplayDataType<T>(defaultInst: () -> T, versioned: Boolean, sparse : Boolean) : DataType<T>(defaultInst, versioned, sparse) {
+    constructor (di : T, versioned: Boolean = false, sparse : Boolean = false) : this({di}, versioned, sparse)
+}
 
 interface DataContainer {
     val dataType : DataType<*>
@@ -380,6 +392,13 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
         return global(dt)
     }
 
+    @JvmName("get1")
+    @Suppress("BOUNDS_NOT_ALLOWED_IF_BOUNDED_BY_TYPE_PARAMETER")
+    operator fun <T : B> get(dt: DataType<T>) : T where T : CreateOnAccessData {
+        return globalEntity[dt]
+    }
+
+
     @Suppress("UNCHECKED_CAST")
     fun <T : B>attachData (entity: Entity, data: T, version: Long = 0L) {
         dataContainer(data.dataType() as DataType<T>).setValue(entity.id, version, data)
@@ -391,6 +410,8 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
 
     fun <T : B>register(dt : DataType<T>) {
         synchronized(this) {
+            if (dataContainers[dt.index] != null) { return }
+
             if (dt.versioned) {
                 dataContainers[dt.index] = VersionedArrayDataContainer(dt, entityCapacity)
             } else {
@@ -410,9 +431,24 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
         }
     }
 
-    operator fun <T : B> Entity.get(dt: DataType<T>) : T? {
+    @JvmName("get1")
+    @Suppress("BOUNDS_NOT_ALLOWED_IF_BOUNDED_BY_TYPE_PARAMETER")
+    operator fun <T> Entity.get(dt: DataType<T>) : T where T : B, T : CreateOnAccessData {
+        val raw = this@WorldT.data(this, dt)
+        return if (raw == null) {
+            val new = dt.creator()
+            attachData(new)
+            new
+        } else {
+            raw
+        }
+    }
+
+    operator fun <T> Entity.get(dt: DataType<T>) : T? where T : B {
         return this@WorldT.data(this, dt)
     }
+
+
 
     fun <T : B> Entity.attachData(t: T) {
         return this@WorldT.attachData(this, t)
@@ -431,6 +467,10 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
             }
         }
         println("\\==============================================================/")
+    }
+
+    operator fun <T> InitWithWorldT<T, B>.invoke() : T {
+        return this.invoke(this@WorldT)
     }
 }
 
@@ -464,3 +504,18 @@ class VersionedWorldViewT<in B : EntityData>(private val world: WorldT<B>, priva
 
 typealias VersionedGameWorldView = VersionedWorldViewT<EntityData>
 typealias VersionedWorldView = VersionedWorldViewT<DisplayData>
+
+
+data class InitWithWorldT<T, out B : EntityData>(val fn : WorldT<B>.() -> T) {
+    private var acquired : T? = null
+    operator fun invoke(w: WorldT<B>) : T {
+        if (acquired == null) {
+            acquired = fn(w)
+        }
+        return acquired!!
+    }
+}
+
+fun <T> initWithWorld(fn : World.() -> T) : InitWithWorldT<T, EntityData> {
+    return InitWithWorldT(fn)
+}

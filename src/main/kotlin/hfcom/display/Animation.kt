@@ -1,25 +1,32 @@
 package hfcom.display
 
 import arx.core.Noto
+import arx.core.RGBA
+import arx.core.expectLet
+import arx.display.core.mix
 import arx.engine.*
-import hfcom.game.CharacterMoved
+import hfcom.game.*
 import org.lwjgl.glfw.GLFW
 import java.lang.Float.max
 import java.lang.Float.min
 import java.util.Collections.emptyIterator
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.math.abs
-import kotlin.math.sin
+import kotlin.math.*
+import kotlin.reflect.KClass
 
 private var AnimationIdCounter = AtomicLong(0L)
 
 enum class AnimationKind {
     CharacterMove,
-    AP
+    AP,
+    Damage,
+    Color,
+    Delay,
+    Death
 }
 
 sealed class Animation(val entity: Entity?) {
-    var id : Long = AnimationIdCounter.incrementAndGet()
+    var id: Long = AnimationIdCounter.incrementAndGet()
     var startedAt: Float? = null
     var curTime: Float? = null
     var duration = 1.0f
@@ -34,8 +41,13 @@ sealed class Animation(val entity: Entity?) {
             }
         }
 
-    fun withDuration(d : Float) : Animation {
+    fun withDuration(d: Float): Animation {
         duration = d
+        return this
+    }
+
+    fun withNext(anim: Animation): Animation {
+        followedBy = followedBy + anim
         return this
     }
 
@@ -43,17 +55,21 @@ sealed class Animation(val entity: Entity?) {
      * Returns the position at which to draw this animation, if it has its own
      * drawing apart from simply modifying the drawing of existing entities
      */
-    fun drawPosition() : MapCoordf? {
+    fun drawPosition(): MapCoordf? {
         return null
     }
 
-    abstract val animationKind : AnimationKind
+    abstract val animationKind: AnimationKind
 
 }
 
+interface PositionAnimation {
+    fun currentPosition() : MapCoordf
+}
 
-data class CharacterMoveAnimation(val character: Entity, val from: MapCoord, val to: MapCoord) : Animation(character) {
-    fun currentPosition() : MapCoordf {
+
+data class CharacterMoveAnimation(val character: Entity, val from: MapCoord, val to: MapCoord) : Animation(character), PositionAnimation {
+    override fun currentPosition(): MapCoordf {
         val delta = (to - from).toFloat()
         val raw = from.toFloat() + delta * f
 
@@ -78,13 +94,49 @@ data class CharacterMoveAnimation(val character: Entity, val from: MapCoord, val
     override val animationKind = AnimationKind.CharacterMove
 }
 
-data class CharacterAPAnimation(val character : Entity, val from : Double, val to : Double) : Animation(character) {
 
-    fun currentAP() : Double {
+data class DamageAnimation(val character: Entity, val fromHPLost: Int, val toHPLost: Int) : Animation(character) {
+    override val animationKind = AnimationKind.Damage
+
+    fun currentHPLost(): Int {
+        return (fromHPLost.toFloat() + (toHPLost - fromHPLost).toFloat() * f).roundToInt()
+    }
+}
+
+data class TintAnimation(val character: Entity, val tintColor: RGBA) : Animation(character) {
+    override val animationKind = AnimationKind.Color
+
+    fun currentColor(): RGBA {
+        val cosf = (cos(f * PI * 2.0f) + 1.0f) * 0.5f
+        return mix(RGBA(255u, 255u, 255u, 255u), tintColor, cosf.toFloat())
+    }
+}
+
+class DelayAnimation(dur: Float) : Animation(null) {
+    init {
+        duration = dur
+    }
+
+    override val animationKind = AnimationKind.Delay
+}
+
+data class CharacterAPAnimation(val character: Entity, val from: Double, val to: Double) : Animation(character) {
+
+    fun currentAP(): Double {
         return from + (to - from) * f
     }
 
     override val animationKind = AnimationKind.AP
+}
+
+data class CharacterDeathAnimation(val character : Entity, val position : MapCoord) : Animation(character), PositionAnimation {
+    override val animationKind = AnimationKind.Death
+
+    // this is a position animation since it involves drawing this entity at a position it may no longer
+    // occupy... since dead entities don't occupy any position
+    override fun currentPosition(): MapCoordf {
+        return position.toMapCoordf()
+    }
 }
 
 
@@ -109,29 +161,45 @@ data class AnimationGroup(var animations: List<Animation>) {
 }
 
 data class AnimationContext(
-    val animationsByEntityAndKind : Map<Entity, Map<AnimationKind, Animation>>,
-    val entityAnimatedPositions : Map<Entity, MapCoordf>,
-    val animatedEntitiesByPosition : Map<MapCoord2D, List<Pair<Entity, MapCoordf>>>,
+    val animationsByEntityAndKind: Map<Entity, Map<AnimationKind, Animation>>,
+    val entityAnimatedPositions: Map<Entity, MapCoordf>,
+    val animatedEntitiesByPosition: Map<MapCoord, List<Pair<Entity, MapCoordf>>>,
+    val animatedEntitiesByPosition2D: Map<MapCoord2D, List<Pair<Entity, MapCoordf>>>,
 ) {
-    fun animationsForEntity(ent : Entity) : Iterator<Animation> {
+    fun animationsForEntity(ent: Entity): Iterator<Animation> {
         return animationsByEntityAndKind[ent]?.values?.iterator() ?: emptyIterator()
     }
 
-    fun nonEmpty() : Boolean {
+    fun nonEmpty(): Boolean {
         return animationsByEntityAndKind.isNotEmpty()
     }
 
-    fun hasPositionAnimation(e : Entity) : Boolean {
+    fun hasPositionAnimation(e: Entity): Boolean {
         return entityAnimatedPositions.contains(e)
     }
-    fun positionAnimatedEntitiesAt(c: MapCoord2D) : List<Pair<Entity, MapCoordf>> {
+
+    fun positionAnimatedEntitiesAt(c: MapCoord): List<Pair<Entity, MapCoordf>> {
         return animatedEntitiesByPosition[c] ?: emptyList()
+    }
+
+    fun positionAnimatedEntitiesAt(c: MapCoord2D): List<Pair<Entity, MapCoordf>> {
+        return animatedEntitiesByPosition2D[c] ?: emptyList()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Any> animationsForEntityAndType(e: Entity, c: KClass<T>): T? {
+        for (anim in animationsForEntity(e)) {
+            if (c.isInstance(anim)) {
+                return anim as T?
+            }
+        }
+        return null
     }
 }
 
 data class AnimationData(
     var animationGroups: List<AnimationGroup> = listOf()
-) : DisplayData {
+) : DisplayData, CreateOnAccessData {
     companion object : DataType<AnimationData>(AnimationData(), sparse = true)
 
     override fun dataType(): DataType<*> {
@@ -140,24 +208,29 @@ data class AnimationData(
 
     val emptyAnimationGroup = AnimationGroup(emptyList())
 
-    private val emptyAnimationContext : AnimationContext = AnimationContext(mapOf(), mapOf(), mapOf())
-    private var animationContextIntern : AnimationContext = emptyAnimationContext
-    val animationContext : AnimationContext get() { return animationContextIntern }
-
-
-    fun updateAnimationContext(animationsByEntityAndKind : Map<Entity, Map<AnimationKind, Animation>>, pos : Map<Entity, MapCoordf>) {
-        val inverted = mutableMapOf<MapCoord2D, List<Pair<Entity, MapCoordf>>>()
-        for ((e,c) in pos) {
-            inverted[c.toMapCoord2D(round = false)] = (inverted[c.toMapCoord2D(round = false)] ?: emptyList()) + Pair(e, c)
+    private val emptyAnimationContext: AnimationContext = AnimationContext(mapOf(), mapOf(), mapOf(), mapOf())
+    private var animationContextIntern: AnimationContext = emptyAnimationContext
+    val animationContext: AnimationContext
+        get() {
+            return animationContextIntern
         }
-        animationContextIntern = AnimationContext(animationsByEntityAndKind, pos, inverted)
+
+
+    fun updateAnimationContext(animationsByEntityAndKind: Map<Entity, Map<AnimationKind, Animation>>, pos: Map<Entity, MapCoordf>) {
+        val inverted = mutableMapOf<MapCoord, List<Pair<Entity, MapCoordf>>>()
+        val inverted2D = mutableMapOf<MapCoord2D, List<Pair<Entity, MapCoordf>>>()
+        for ((e, c) in pos) {
+            inverted[c.toMapCoord(round = false)] = (inverted[c.toMapCoord(round = false)] ?: emptyList()) + Pair(e, c)
+            inverted2D[c.toMapCoord2D(round = false)] = (inverted2D[c.toMapCoord2D(round = false)] ?: emptyList()) + Pair(e, c)
+        }
+        animationContextIntern = AnimationContext(animationsByEntityAndKind, pos, inverted, inverted2D)
     }
 
     fun clearAnimationContext() {
         animationContextIntern = emptyAnimationContext
     }
 
-    fun createAnimationGroup(vararg animations : Animation) {
+    fun createAnimationGroup(vararg animations: Animation) {
         animationGroups = animationGroups + AnimationGroup(animations.toList())
     }
 }
@@ -177,7 +250,7 @@ object AnimationComponent : DisplayComponent() {
     }
 
     override fun update(world: World): Boolean {
-        val AD = world[AnimationData] ?: return false
+        val AD = world[AnimationData]
 
         return if (AD.animationGroups.isNotEmpty()) {
             val now = GLFW.glfwGetTime().toFloat()
@@ -185,7 +258,7 @@ object AnimationComponent : DisplayComponent() {
             var rerun = true
             var updateContext = false
 
-            while(rerun && AD.animationGroups.isNotEmpty()) {
+            while (rerun && AD.animationGroups.isNotEmpty()) {
                 rerun = false
 
                 val ag = AD.animationGroups[0]
@@ -221,7 +294,7 @@ object AnimationComponent : DisplayComponent() {
                 }
             }
 
-            val organizedAnims : Map<Entity, Map<AnimationKind, Animation>> = if (updateContext) {
+            val organizedAnims: Map<Entity, Map<AnimationKind, Animation>> = if (updateContext) {
                 val ret = mutableMapOf<Entity, MutableMap<AnimationKind, Animation>>()
                 for (ag in AD.animationGroups) {
                     // do a breadth first iteration through animations, keeping the first one for any
@@ -236,7 +309,7 @@ object AnimationComponent : DisplayComponent() {
                             val m = ret.getOrPut(anim.entity) { mutableMapOf() }
                             m.putIfAbsent(anim.animationKind, anim)
                         } else {
-                            Noto.warn("We don't really handle non-entity animations yet")
+                            Noto.warn("We don't really handle non-entity animations yet : $anim")
                         }
                         for (childAnim in anim.followedBy) {
                             q.addLast(childAnim)
@@ -252,7 +325,11 @@ object AnimationComponent : DisplayComponent() {
             for (animMap in organizedAnims.values) {
                 for (anim in animMap.values) {
                     when (anim) {
-                        is CharacterMoveAnimation -> positionOverrides = positionOverrides + (anim.character to anim.currentPosition())
+                        is PositionAnimation -> {
+                            anim.entity.expectLet {
+                                positionOverrides = positionOverrides + (it to anim.currentPosition())
+                            }
+                        }
                         else -> {}
                     }
                 }
@@ -267,11 +344,34 @@ object AnimationComponent : DisplayComponent() {
         }
     }
 
-    override fun handleEvent(world: World, e: Event) {
-        if (e !is GameEvent) { return }
+    override fun handleEvent(world: World, event: Event) {
+        with(world) {
+            if (event !is GameEvent) {
+                return
+            }
 
-        when (e) {
-            is CharacterMoved -> world[AnimationData]?.createAnimationGroup(CharacterMoveAnimation(e.character, e.from, e.to).withDuration(e.from.xy.distanceTo(e.to.xy) * 0.25f + min(abs(e.from.z - e.to.z).toFloat(), 1.0f) * 0.1f))
+            val AD = world[AnimationData]
+
+            when (event) {
+                is CharacterMoved -> AD.createAnimationGroup(
+                    CharacterMoveAnimation(event.character, event.from, event.to).withDuration(
+                        event.from.xy.distanceTo(event.to.xy) * 0.25f + min(
+                            abs(event.from.z - event.to.z).toFloat(),
+                            1.0f
+                        ) * 0.1f
+                    )
+                )
+                is DamageTaken -> AD.createAnimationGroup(
+                    DelayAnimation(0.15f).withNext(
+                        TintAnimation(event.character, RGBA(255u, 0u, 0u, 255u)).withDuration(0.3f).withNext(
+                            DamageAnimation(event.character, event.hpLostBefore, event.hpLostAfter).withDuration((event.hpLostAfter - event.hpLostBefore).toFloat() * 0.2f)
+                        )
+                    )
+                )
+                is CharacterDied -> AD.createAnimationGroup(
+                    CharacterDeathAnimation(event.character, (+event.character[Physical]).position).withDuration(0.5f)
+                )
+            }
         }
     }
 }

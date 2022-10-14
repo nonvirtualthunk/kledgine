@@ -3,6 +3,7 @@ package hfcom.game
 import arx.core.Pathfinder
 import arx.core.Taxonomy.UnknownThing
 import arx.engine.Entity
+import arx.engine.GameWorld
 import arx.engine.World
 import hfcom.display.MapCoord
 import kotlin.math.abs
@@ -13,7 +14,7 @@ private val dys = arrayOf(0, 0, -1, 1)
 
 
 
-fun pathfinder(world: World, character: Entity) : Pathfinder<MapCoord> {
+fun pathfinder(world: GameWorld, character: Entity) : Pathfinder<MapCoord> {
     val tm = world[TacticalMap]!!
     val cd = +world.data(character, CharacterData)
 
@@ -48,7 +49,7 @@ fun pathfinder(world: World, character: Entity) : Pathfinder<MapCoord> {
             world.moveCost(tm, cd, from, to)
         },
         { from, target ->
-            (abs(from.x - target.x) + abs(from.y - target.y) + abs(from.z - target.z)).toDouble()
+            (abs(from.x - target.x) * 1.001 + abs(from.y - target.y) + abs(from.z - target.z)).toDouble()
         }
     )
 }
