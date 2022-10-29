@@ -20,7 +20,7 @@ interface ImageRef {
             return if (str != null) {
                 ImagePath(str)
             } else {
-                SentinelImage
+                SentinelImageRef
             }
         }
     }
@@ -40,8 +40,8 @@ data class ImagePath(val path: String) : ImageRef {
     }
 }
 
-object SentinelImage : ImageRef {
-    val img = Image.ofSize(64,64).withPixels { x, y, v -> if (x == 0 || y == 0 || x == 63 || y == 63) { v(0u,0u,0u,255u) } else { v((x*2).toUByte(), (y * 4).toUByte(), (x*2).toUByte(), 255u) } }
+object SentinelImageRef : ImageRef {
+    val img = SentinelImage
     override fun toImage(): Image {
         return img
     }
@@ -51,16 +51,35 @@ object SentinelImage : ImageRef {
     }
 }
 
+object SentinelImage : Image() {
+    init {
+        val w = 64
+        val h = 64
+        data = ByteBuffer.allocate(w * h * 4)
+        data = MemoryUtil.memCalloc(w*h*4)
+        dimensions = Vec2i(w,h)
+        ymult = w * 4
+        withPixels { x, y, v -> if (x == 0 || y == 0 || x == 63 || y == 63) { v(0u,0u,0u,255u) } else { v((x*2).toUByte(), (y * 4).toUByte(), (x*2).toUByte(), 255u) } }
+    }
+    override fun isSentinel(): Boolean {
+        return true
+    }
+
+    override fun toString(): String {
+        return "SentinelImage"
+    }
+}
 
 @Suppress("NOTHING_TO_INLINE")
-class Image private constructor() : ImageRef {
+open class Image internal constructor() : ImageRef {
     var data : ByteBuffer = ByteBuffer.allocate(0)
     var dimensions  = Vec2i(0,0)
-    private var ymult : Int  = 0
+    internal var ymult : Int  = 0
     inline val width get() = dimensions.x
     inline val height get() = dimensions.y
     var revision: Int = 1
-
+    var path : String? = null
+    var destroyed: Boolean = false
 
     private inline fun offset(x: Int, y: Int): Int = y * ymult + (x shl 2)
 
@@ -212,6 +231,15 @@ class Image private constructor() : ImageRef {
 
     fun destroy() {
         MemoryUtil.memFree(data)
+        destroyed = true
+    }
+
+    override fun toString(): String {
+        return if (path != null) {
+            "Image($path)"
+        } else {
+            "Image(${width}x${height})"
+        }
     }
 
     companion object {
@@ -228,7 +256,7 @@ class Image private constructor() : ImageRef {
 
                     if (buff == null) {
                         System.err.println("Could not load image: $path")
-                        Image()
+                        SentinelImageRef.img
                     } else {
                         val img = Image()
                         img.data = buff

@@ -15,7 +15,11 @@ data class CharacterPlaced(val character: Entity, val at : MapCoord) : GameEvent
 
 data class CharacterPerformedAction(val character: Entity, val action: Action, val targets: List<EffectTarget>) : GameEvent()
 
-data class CharacterAttacked(val character : Entity, val target : Entity) : GameEvent()
+data class CharacterAttacked(val attacker : Entity, val target : Entity) : GameEvent()
+
+data class AttackHit(val attacker: Entity, val target : Entity, val attack : Attack) : GameEvent()
+
+data class AttackMiss(val attacker: Entity, val target : Entity, val attack : Attack) : GameEvent()
 
 data class DamageTaken(val character : Entity, val hpLostBefore : Int, val hpLostAfter : Int) : GameEvent()
 

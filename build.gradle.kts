@@ -1,5 +1,6 @@
 import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.jvm.tasks.Jar
 
 plugins {
 	kotlin("jvm") version "1.7.20-Beta"
@@ -96,4 +97,23 @@ compileKotlin.kotlinOptions {
 val compileTestKotlin: KotlinCompile by tasks
 compileTestKotlin.kotlinOptions {
 	jvmTarget = "17"
+}
+
+
+
+val fatJar = task("fatJar", type = Jar::class) {
+	baseName = "${project.name}-fat"
+	manifest {
+		attributes["Implementation-Title"] = "Gradle Jar File Example"
+		attributes["Main-Class"] = "experiment.pixelator.PixelatorKt"
+		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	}
+	from(configurations.runtimeClasspath.get().map({ if (it.isDirectory) it else zipTree(it) }))
+	with(tasks.jar.get() as CopySpec)
+}
+
+tasks {
+	"build" {
+		dependsOn(fatJar)
+	}
 }

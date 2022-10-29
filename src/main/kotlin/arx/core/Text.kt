@@ -2,6 +2,7 @@ package arx.core
 
 import arx.display.core.Image
 import arx.display.core.SimpleQuad
+import com.typesafe.config.ConfigValue
 import java.awt.*
 import java.awt.font.FontRenderContext
 import java.awt.font.GlyphVector
@@ -86,11 +87,25 @@ class ArxFont(val font: Font, val size: Int, val typeface: ArxTypeface) {
 
 
 
-sealed interface RichTextSegment
+sealed interface RichTextSegment {
+    fun isEmpty(): Boolean
+}
 
-data class SimpleTextSegment (val text: String) : RichTextSegment
-data class StyledTextSegment (val text: String, val color: RGBA? = null, val font: ArxFont? = null) : RichTextSegment
-data class ImageSegment (val image: Image, val color: RGBA? = null, val size: Int? = null) : RichTextSegment
+data class SimpleTextSegment (val text: String) : RichTextSegment {
+    override fun isEmpty(): Boolean {
+        return text.isEmpty()
+    }
+}
+data class StyledTextSegment (val text: String, val color: RGBA? = null, val font: ArxFont? = null) : RichTextSegment {
+    override fun isEmpty(): Boolean {
+        return text.isEmpty()
+    }
+}
+data class ImageSegment (val image: Image, val color: RGBA? = null, val size: Int? = null) : RichTextSegment {
+    override fun isEmpty(): Boolean {
+        return false
+    }
+}
 
 data class RichText(
     val segments : MutableList<RichTextSegment> = mutableListOf(),
@@ -106,6 +121,27 @@ data class RichText(
             }
         }
     }
+
+    fun isEmpty() : Boolean {
+        return segments.isEmpty() || segments.all { it.isEmpty() }
+    }
+}
+
+enum class HorizontalTextAlignment {
+    Left,
+    Centered,
+    Right;
+
+    companion object : FromConfigCreator<HorizontalTextAlignment> {
+        override fun createFromConfig(cv: ConfigValue?): HorizontalTextAlignment? {
+            return when (cv.asStr()?.lowercase() ?: "") {
+                "left" -> Left
+                "centered", "center" -> Centered
+                "right" -> Right
+                else -> null
+            }
+        }
+    }
 }
 
 class TextLayout {
@@ -118,6 +154,7 @@ class TextLayout {
     var min = Vec2i(0,0)
     var max = Vec2i(0,0)
     var endCursorPos = Vec2i(0,0)
+    var lineBreaks : List<Int> = listOf()
 
     val bounds : Recti
         get() { return Recti(min.x, min.y, max.x - min.x + 1, max.y - min.y + 1)}
@@ -126,22 +163,58 @@ class TextLayout {
         return min == max
     }
 
+    data class Params(
+        val text: RichText,
+        val position: Vec2i,
+        val region: Recti,
+        val defaultFont: ArxFont = DefaultFont,
+        val defaultColor: RGBA? = null,
+        val horizontalAlignment: HorizontalTextAlignment = HorizontalTextAlignment.Left
+    )
+
     companion object {
         val frc = FontRenderContext(AffineTransform(), false, false)
-        val defaultFont = Resources.typeface("arx/fonts/ChevyRayExpress.ttf").withSize(9)
+        val DefaultTypeface = Resources.typeface("arx/fonts/ChevyRayExpress.ttf")
+        val DefaultFont = DefaultTypeface.withSize(9)
 
-        fun layout(text: RichText, position: Vec2i, region: Recti, defaultFont: ArxFont = TextLayout.defaultFont) : TextLayout {
-            val ret = TextLayout()
-            ret.min.x = position.x
-            ret.min.y = position.y
-            ret.max.x = position.x
-            ret.max.y = position.y
-            val cursor = Vec2i(position.x, position.y + defaultFont.fontMetrics.maxAscent)
-            for (segment in text.segments) {
-                layoutSegment(ret, text, segment, cursor, region, defaultFont)
+        fun layout(text: RichText, position: Vec2i, region: Recti, defaultFont: ArxFont = DefaultFont) : TextLayout {
+            return layout(Params(text = text, position = position, region = region, defaultFont = defaultFont))
+        }
+
+        fun layout(params : Params) : TextLayout {
+            with(params) {
+                val ret = TextLayout()
+                ret.min.x = position.x
+                ret.min.y = position.y
+                ret.max.x = position.x
+                ret.max.y = position.y
+                val cursor = Vec2i(position.x, position.y + defaultFont.fontMetrics.maxAscent)
+                for (segment in text.segments) {
+                    layoutSegment(ret, text, segment, cursor, region, params)
+                }
+                ret.endCursorPos = cursor
+
+                if (horizontalAlignment == HorizontalTextAlignment.Centered || horizontalAlignment == HorizontalTextAlignment.Right) {
+                    var start = 0
+                    for (lineBreak in ret.lineBreaks) {
+                        if (lineBreak - 1 >= 0) {
+                            val minX = ret.quads[start].position.x
+                            val maxX = ret.quads[lineBreak - 1].position.x + ret.quads[lineBreak - 1].dimensions.x
+                            val offset = if (horizontalAlignment == HorizontalTextAlignment.Centered) {
+                                (region.width - (maxX - minX)) / 2
+                            } else {
+                                region.width - (maxX - minX)
+                            }
+                            for (i in start until lineBreak) {
+                                ret.quads[i].position.x += offset
+                            }
+                            start = lineBreak
+                        }
+                    }
+                }
+
+                return ret
             }
-            ret.endCursorPos = cursor
-            return ret
         }
 
         private fun layoutTextSegment(layout: TextLayout, rt: RichText, text: String, color: RGBA?, cursor: Vec2i, region: Recti, font: ArxFont) {
@@ -167,6 +240,7 @@ class TextLayout {
                 if (lbm.position < iter.endIndex) {
                     cursor.y += font.fontMetrics.height
                 }
+                layout.lineBreaks = layout.lineBreaks + g.quads.size
             }
 
             for (qi in quadsPreIndex until g.quads.size) {
@@ -176,11 +250,13 @@ class TextLayout {
             }
         }
 
-        private fun layoutSegment(layout : TextLayout, rt: RichText, segment: RichTextSegment, position: Vec2i, region: Recti, defaultFont: ArxFont) {
-            return when (segment) {
-                is SimpleTextSegment -> layoutTextSegment(layout, rt, segment.text, rt.color, position, region, rt.font ?: defaultFont)
-                is StyledTextSegment -> layoutTextSegment(layout, rt, segment.text, segment.color ?: rt.color, position, region, segment.font ?: rt.font ?: defaultFont)
-                is ImageSegment -> TODO("Image segments not yet implemented")
+        private fun layoutSegment(layout: TextLayout, rt: RichText, segment: RichTextSegment, position: Vec2i, region: Recti, params: Params) {
+            with(params) {
+                return when (segment) {
+                    is SimpleTextSegment -> layoutTextSegment(layout, rt, segment.text, rt.color ?: defaultColor, position, region, rt.font ?: defaultFont)
+                    is StyledTextSegment -> layoutTextSegment(layout, rt, segment.text, segment.color ?: rt.color ?: defaultColor, position, region, segment.font ?: rt.font ?: defaultFont)
+                    is ImageSegment -> TODO("Image segments not yet implemented")
+                }
             }
         }
     }

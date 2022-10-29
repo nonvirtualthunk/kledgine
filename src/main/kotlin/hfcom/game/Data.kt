@@ -164,7 +164,7 @@ operator fun FlagData?.unaryPlus(): FlagData {
     return this ?: FlagData.defaultInstance
 }
 
-data class StatsChange(val stats: CombatStats, val endCondition : Taxon)
+data class StatsChange(val stats: CombatStats, val endCondition : Taxon, val source: String)
 
 
 data class CharacterData(
@@ -177,7 +177,7 @@ data class CharacterData(
     var equippedItems: Map<Entity, List<Taxon>> = mapOf(),
     var faction: Taxon = t("Factions.Enemy"),
     var classLevels: List<CharacterClassLevel> = listOf(),
-    var activeAction: ActionIdentifier? = null,
+    var activeActionIdentifier: ActionIdentifier? = null,
     var statsChanges: List<StatsChange> = emptyList(),
     var dead : Boolean = false
 ) : GameData {
@@ -237,6 +237,8 @@ sealed interface ActionIdentifier {
     data class Skill(override val source: Entity, val kind: Taxon) : ActionIdentifier
     data class Attack(override val source: Entity, val name: String) : ActionIdentifier
     data class CastSpell(override val source: Entity, val spell: Taxon) : ActionIdentifier
+
+    data class Move(override val source: Entity) : ActionIdentifier
 }
 
 
@@ -321,7 +323,19 @@ sealed interface Effect {
     }
 }
 
-enum class TargetKind {
+
+interface TargetPredicate {
+    fun GameWorld.isValidTarget(actor: Entity, target : EffectTarget) : Boolean
+
+    companion object : FromConfigCreator<TargetPredicate> {
+        override fun createFromConfig(cv: ConfigValue?): TargetPredicate? {
+            return TargetKind.createFromConfig(cv)
+        }
+    }
+}
+
+
+enum class TargetKind : TargetPredicate {
     Self,
     Enemy,
     Tile;
@@ -339,7 +353,17 @@ enum class TargetKind {
             }
         }
     }
+
+    override fun GameWorld.isValidTarget(actor: Entity, target : EffectTarget) : Boolean {
+        return when(this@TargetKind) {
+            Self -> target == EffectTarget.Entity(actor)
+            Enemy -> (target as? EffectTarget.Entity)?.let { t -> isEnemy(actor, t.entity) } ?: false
+            Tile -> target is EffectTarget.Tile
+        }
+    }
 }
+
+
 
 
 sealed interface EffectTarget {
@@ -350,12 +374,15 @@ sealed interface EffectTarget {
     data class Path(val path : Pathfinder.Path<MapCoord>) : EffectTarget
 }
 
-data class TargetedEffect(val effect: Effect, val target: TargetKind) {
+data class TargetedEffect(val effect: Effect, val targetingRules: List<TargetPredicate>) {
     companion object : FromConfigCreator<TargetedEffect> {
         override fun createFromConfig(cv: ConfigValue?): TargetedEffect? {
             val eff = Effect.createFromConfig(cv) ?: return null
-            val target = TargetKind.createFromConfig(cv["target"]) ?: eff.defaultTarget()
-            return TargetedEffect(eff, target)
+            var targetingRules = (cv["target"].asList() + cv["targets"].asList()).mapNotNull { TargetPredicate.createFromConfig(it) }
+            if (targetingRules.isEmpty()) {
+                targetingRules = listOf(eff.defaultTarget())
+            }
+            return TargetedEffect(eff, targetingRules)
         }
     }
 
@@ -377,15 +404,17 @@ data class Action(
 }
 
 val NoOpAction = Action("No Action", listOf(), 1)
-val MoveAction = Action("Move", listOf(TargetedEffect(Effect.Move, TargetKind.Tile)), 0)
+val MoveAction = Action("Move", listOf(TargetedEffect(Effect.Move, listOf(TargetKind.Tile))), 0)
 
 data class Skill(
     val name: String,
-    val action: Action
+    val action: Action,
+    val icon: ImageRef? = null
 ) {
     constructor (cv: ConfigValue) : this(
         name = cv["name"].asStr() ?: "Unnamed Skill",
-        action = Action(cv)
+        action = Action(cv),
+        icon = cv["icon"]?.let { ImageRef(it) }
     )
 }
 
@@ -393,25 +422,35 @@ object Skills : SimpleLibrary<Skill>("Skills", listOf("hfcom/data/Skills.sml"), 
 
 
 fun GameWorld.effectiveCombatStats(ent: Entity): CombatStats {
+    return effectiveCombatStatsContributions(ent).merge()
+}
+
+
+fun GameWorld.effectiveCombatStatsContributions(ent: Entity): List<CombatStatsContribution> {
     val cd = ent[CharacterData]
     return if (cd == null) {
         Noto.err("effectiveCombatStats(...) is only expected to be called on a character")
-        CombatStats()
+        emptyList()
     } else {
-        var ret = cd.combatStats
+        val ret = mutableListOf(CombatStatsContribution(cd.combatStats, "base character stats"))
+        for (cl in cd.classLevels) {
+            ret.add(CombatStatsContribution(cl.combatStats, cl.name))
+        }
         for ((equipped, _) in cd.equippedItems) {
             equipped[Item]?.equippedCombatStats?.let {
-                ret += it
+                ret.add(CombatStatsContribution(it, equipped[Identity]?.nameOrKind() ?: "Item"))
             }
         }
-        for (cl in cd.classLevels) {
-            ret += cl.combatStats
-        }
         for (sc in cd.statsChanges) {
-            ret += sc.stats
+            ret.add(CombatStatsContribution(sc.stats, sc.source))
         }
         ret
     }
+}
+
+
+fun List<CombatStatsContribution>.merge() : CombatStats {
+    return this.fold(CombatStats()) { a,b -> a + b.stats }
 }
 
 fun GameWorld.effectiveFlags(ent: Entity): Map<Taxon, Int> {
@@ -502,12 +541,16 @@ data class Attack(
     }
 }
 
+data class CombatStatsContribution(val stats : CombatStats, val from : String)
+
 data class AttackSummary(
     val attack : Attack,
     val hitFraction : Float,
     val minDamage : Int,
     val maxDamage : Int,
-    val range : Int
+    val range : Int,
+    val attackerStatsContributions : List<CombatStatsContribution>,
+    val defenderStatsContributions : List<CombatStatsContribution>,
 ) {
     val hitPercentDisplay : String get() { return (hitFraction * 100.0).roundToInt().toString() }
     val damageRangeDisplay : String get() {
@@ -665,7 +708,8 @@ data class Tile(
 data class TacticalMap(
     var tiles: FiniteGrid2D<Tile> = FiniteGrid2D(Vec2i(128, 128), Tile()),
     var groundLevel: Int = 2, // purely a display convenience, represents the baseline expected depth of terrain
-    var activeFaction: Taxon = t("Factions.Player")
+    var activeFaction: Taxon = t("Factions.Player"),
+    var entities: MutableSet<Entity> = mutableSetOf(),
 
 ) : GameData {
     companion object : DataType<TacticalMap>(TacticalMap())

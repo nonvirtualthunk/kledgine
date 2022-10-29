@@ -2,12 +2,10 @@ package arx.core
 
 import arx.display.core.Image
 import arx.display.core.ImageRef
-import arx.display.core.SentinelImage
+import arx.display.core.SentinelImageRef
 import com.typesafe.config.ConfigValue
-import java.lang.reflect.Field
-import kotlin.reflect.full.declaredMemberProperties
-import kotlin.reflect.full.functions
-import kotlin.reflect.full.instanceParameter
+import kotlin.reflect.KMutableProperty
+import kotlin.reflect.full.*
 
 
 val stringBindingPattern = Regex("%\\(\\??\\s*([a-zA-Z\\d.]*\\s*)\\)")
@@ -48,22 +46,18 @@ val EmptyBindingContext = BindingContext(mapOf(), null)
 
 interface Bindable<out T> {
     companion object {
-        val updateFunctionsByType = mutableMapOf<Class<*>, (Any) -> Boolean>()
+        val updateFunctionsByType = mutableMapOf<Class<*>, (Any, BindingContext) -> Boolean>()
 
         fun updateBindableFields(v: Any, ctx: BindingContext) : Boolean {
             val fn = updateFunctionsByType.getOrPut(v.javaClass) {
-                val relevantFields = mutableListOf<Field>()
-                for (field in v.javaClass.declaredFields) {
-                    if (Bindable::class.java.isAssignableFrom(field.type) && field.canAccess(v)) {
-                        relevantFields.add(field)
-                    }
-                }
+                val relevantFields = (v::class.memberProperties
+                    .filter { p -> p.getter.returnType.isSubtypeOf(Bindable::class.starProjectedType) })
 
-                { a ->
+                { a, c ->
                     var anyChanged = false
                     for (field in relevantFields) {
-                        val bindable = field.get(a) as Bindable<*>
-                        if (bindable.update(ctx)) {
+                        val bindable = field.getter.call(a) as Bindable<*>
+                        if (bindable.update(c)) {
                             anyChanged = true
                         }
 
@@ -72,7 +66,7 @@ interface Bindable<out T> {
                 }
             }
 
-            return fn(v)
+            return fn(v, ctx)
         }
     }
 
@@ -146,6 +140,29 @@ fun bindableRGBA(cv : ConfigValue?) : Bindable<RGBA> {
     }
 }
 
+fun bindableRGBAOpt(cv : ConfigValue?) : Bindable<RGBA?> {
+    if (cv == null) {
+        return ValueBindable.Null()
+    }
+    val directParsed = RGBA(cv)
+    return if (directParsed != null) {
+        ValueBindable(directParsed)
+    } else {
+        if (cv.isStr()) {
+            val str = cv.asStr() ?: ""
+            stringBindingPattern.match(str).ifLet { (pattern) ->
+                RGBAOptPatternBindable(pattern, null) as Bindable<RGBA?>
+            }.orElse {
+                Noto.warn("Invalid string representation for rgba?: $cv")
+                ValueBindable.Null()
+            }
+        } else {
+            Noto.warn("Invalid config for bindable rgba?: $cv")
+            ValueBindable.Null()
+        }
+    }
+}
+
 fun bindableString(cv : ConfigValue?) : Bindable<String> {
     return if (cv.isStr()) {
         val str = cv.asStr() ?: ""
@@ -184,7 +201,7 @@ fun bindableImage(cv : ConfigValue?) : Bindable<Image> {
         }
     } else {
         Noto.warn("Invalid config for bindable image : $cv")
-        ValueBindable(SentinelImage.toImage())
+        ValueBindable(SentinelImageRef.toImage())
     }
 }
 
@@ -381,7 +398,7 @@ class IntPatternBindable(pattern : String, value : Int = 0) : SimplePatternBinda
     }
 }
 
-class ImageRefPattern(pattern : String, value : ImageRef = SentinelImage) : SimplePatternBindable<ImageRef>(pattern, value) {
+class ImageRefPattern(pattern : String, value : ImageRef = SentinelImageRef) : SimplePatternBindable<ImageRef>(pattern, value) {
     override fun transform(a: Any?): ImageRef? {
         return a as? ImageRef
     }
@@ -391,7 +408,7 @@ class ImageRefPattern(pattern : String, value : ImageRef = SentinelImage) : Simp
     }
 }
 
-class ImagePattern(pattern : String, value : Image = SentinelImage.toImage()) : SimplePatternBindable<Image>(pattern, value) {
+class ImagePattern(pattern : String, value : Image = SentinelImageRef.toImage()) : SimplePatternBindable<Image>(pattern, value) {
     override fun transform(a: Any?): Image? {
         return (a as? ImageRef)?.toImage() ?: (a as? Image)
     }
@@ -411,6 +428,17 @@ class RGBAPatternBindable(pattern : String, value : RGBA = White) : SimplePatter
         return RGBAPatternBindable(pattern, value)
     }
 }
+
+class RGBAOptPatternBindable(pattern : String, value : RGBA? = null) : SimplePatternBindable<RGBA?>(pattern, value) {
+    override fun transform(a: Any?): RGBA? {
+        return a as? RGBA
+    }
+
+    override fun copyBindable(): Bindable<RGBA?> {
+        return RGBAOptPatternBindable(pattern, value)
+    }
+}
+
 
 class FloatPatternBindable(pattern : String, value : Float = 0.0f) : SimplePatternBindable<Float>(pattern, value) {
     override fun transform(a: Any?): Float? {

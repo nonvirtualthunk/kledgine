@@ -233,6 +233,10 @@ object Taxonomy {
 data class Identity (val identity : Taxon, val name : String? = null) : GameData {
     companion object : DataType<Identity>( Identity(UnknownThing) )
     override fun dataType() : DataType<*> { return Identity }
+
+    fun nameOrKind() : String {
+        return name ?: identity.toString()
+    }
 }
 
 

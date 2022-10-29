@@ -4,10 +4,8 @@ import arx.application.Application
 import arx.core.*
 import arx.core.RGBA
 import arx.display.core.*
-import arx.engine.DisplayComponent
-import arx.engine.DisplayEvent
+import arx.engine.*
 import arx.engine.Event
-import arx.engine.World
 import dev.romainguy.kotlin.math.ortho
 import org.lwjgl.opengl.GL11
 
@@ -82,7 +80,10 @@ object WindowingSystemComponent : DisplayComponent() {
     val shader = Resources.shader("arx/shaders/windowing")
 
     override fun initialize(world: World) {
-        world[WindowingSystem].registerStandardComponents()
+        eventPriority = EventPriority.First
+        val ws = world[WindowingSystem]
+        ws.registerStandardComponents()
+        ws.world.eventCallbacks = ws.world.eventCallbacks + { e -> world.fireEvent(e) }
     }
 
     override fun update(world: World) : Boolean {
@@ -125,7 +126,7 @@ object WindowingSystemComponent : DisplayComponent() {
         }
 
         val bmin = w.bounds.min()
-        val bmax = w.bounds.max()
+        val bmax = w.bounds.max() + 1
 
         for (quad in w.quads) {
             if (quad.beforeChildren) {

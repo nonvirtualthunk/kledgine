@@ -33,6 +33,7 @@ sealed class KeyEvent : DisplayEvent() {
 data class KeyReleaseEvent(override val key: Key, val mods: KeyModifiers) : KeyEvent()
 data class KeyPressEvent(override val key: Key, val mods: KeyModifiers) : KeyEvent()
 data class KeyRepeatEvent(override val key: Key, val mods: KeyModifiers) : KeyEvent()
+data class CharInputEvent(val char : Char) : DisplayEvent()
 data class MousePressEvent(override val position: Vec2f, val button: MouseButton, val mods: KeyModifiers) : MouseEvent()
 data class MouseReleaseEvent(override val position: Vec2f, val button: MouseButton, val mods: KeyModifiers) : MouseEvent()
 data class MouseMoveEvent(override val position: Vec2f, val delta: Vec2f, val mods: KeyModifiers) : MouseEvent()

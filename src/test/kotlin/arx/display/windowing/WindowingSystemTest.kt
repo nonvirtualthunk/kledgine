@@ -49,6 +49,7 @@ internal class WindowingSystemTest {
             height = WidgetDimensions.Relative(90)
         }
 
+        ws.scale = 1
         ws.updateGeometry(Vec2i(1200,800))
 
         assertEquals(Vec3i(20, 400, 0), windowA.resolvedPosition)

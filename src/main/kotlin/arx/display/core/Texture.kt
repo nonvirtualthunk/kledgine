@@ -48,13 +48,14 @@ class TextureBlock(size: Int, val borderWidth: Int = 1, srgbFormat : Boolean = f
     val data = image
 
     var openRects = mutableListOf(Recti(0,0,size,size))
-    var atlasData = mutableListOf<AtlasData>()
+//    var atlasData = mutableListOf<AtlasData>()
     var atlasDataByImage = mutableMapOf<Image, AtlasData>()
     val blankTexData : AtlasData
 
     init {
-        getOrUpdate(Image.ofSize(1,1).withPixels { _, _, v -> v(255u,255u,255u,255u) })
-        blankTexData = atlasData[0]
+        val img = Image.ofSize(1,1).withPixels { _, _, v -> v(255u,255u,255u,255u) }
+        getOrUpdate(img)
+        blankTexData = atlasDataByImage[img]!!
     }
 
     fun toAtlasData(r: Recti, revision: Int) : AtlasData {
@@ -114,12 +115,22 @@ class TextureBlock(size: Int, val borderWidth: Int = 1, srgbFormat : Boolean = f
             data.revision++
 
             val ad = toAtlasData(Recti(chosenRect.position + borderWidth, img.dimensions), img.revision)
-            atlasData.add(ad)
+//            atlasData.add(ad)
             atlasDataByImage[img] = ad
             return ad
         } else {
-            System.err.println("failed to find space in texture block for image of size ${img.dimensions}")
-            return blankTexture()
+            val toRemove = atlasDataByImage.keys.filter { it.destroyed }
+            for (destroyedImage in toRemove) {
+                atlasDataByImage.remove(destroyedImage)?.let { data ->
+                    openRects.add(Recti(data.location - borderWidth, data.dimensions + borderWidth * 2))
+                }
+            }
+            // if we theoretically freed up space then try again
+            return if (toRemove.isNotEmpty()) {
+                getOrUpdate(img)
+            } else {
+                blankTexture()
+            }
         }
     }
 

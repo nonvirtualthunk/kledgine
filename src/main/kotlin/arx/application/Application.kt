@@ -33,9 +33,10 @@ class Application(val windowWidth : Int = 800, val windowHeight : Int = 800) {
     companion object {
         var frameBufferSize = Vec2i(0,0)
         var windowSize = Vec2i(0,0)
+        var window : Long = 0L
+        var cursorShowing : Boolean = true
     }
 
-    private var window: Long = 0
     fun run(engine: Engine) {
         this.engine = engine
 
@@ -84,6 +85,10 @@ class Application(val windowWidth : Int = 800, val windowHeight : Int = 800) {
                 GLFW_RELEASE -> engine.handleEvent(KeyReleaseEvent(ke, activeModifiers))
                 GLFW_REPEAT -> engine.handleEvent(KeyRepeatEvent(ke, activeModifiers))
             }
+        }
+
+        glfwSetCharCallback(window) { window, codepoint ->
+            engine.handleEvent(CharInputEvent(codepoint.toChar()))
         }
 
         glfwSetMouseButtonCallback(window) { _, button, action, mods ->
@@ -185,5 +190,19 @@ class Application(val windowWidth : Int = 800, val windowHeight : Int = 800) {
             // invoked during this call.
             glfwPollEvents()
         }
+    }
+}
+
+fun enableCursor() {
+    if (!Application.cursorShowing) {
+        GLFW.glfwSetInputMode(Application.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+        Application.cursorShowing = true
+    }
+}
+
+fun disableCursor() {
+    if (Application.cursorShowing) {
+        GLFW.glfwSetInputMode(Application.window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN)
+        Application.cursorShowing = false
     }
 }

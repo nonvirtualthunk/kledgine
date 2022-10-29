@@ -3,6 +3,7 @@ package arx.engine
 
 abstract class EngineComponent {
     var engine : Engine? = null
+    var eventPriority : EventPriority = EventPriority.Normal
 
     fun fireEvent(event : Event) {
         engine!!.handleEvent(event)
@@ -21,8 +22,6 @@ enum class EventPriority {
 }
 
 abstract class DisplayComponent : EngineComponent() {
-    var eventPriority = EventPriority.Normal
-
     open fun initialize(world: World) {}
 
     open fun update(world: World) : Boolean { return false }
@@ -66,9 +65,13 @@ abstract class GameComponent : EngineComponent() {
 
 
 class Engine(
-    var gameComponents : MutableList<GameComponent> = mutableListOf(),
-    var displayComponents : MutableList<DisplayComponent> = mutableListOf()
+    val gameComponents : List<GameComponent> = emptyList(),
+    val displayComponents : List<DisplayComponent> = emptyList(),
 ) {
+
+
+    var gameComponentsByEventPriority = gameComponents.sortedByDescending { it.eventPriority }
+    var displayComponentsByEventPriority = displayComponents.sortedByDescending { it.eventPriority }
 
     var world = World().apply {
         eventCallbacks = eventCallbacks + { e -> handleEvent(e) }
@@ -87,6 +90,9 @@ class Engine(
         for (dc in displayComponents) {
             dc.initialize(world)
         }
+
+        gameComponentsByEventPriority = gameComponents.sortedByDescending { it.eventPriority }
+        displayComponentsByEventPriority = displayComponents.sortedByDescending { it.eventPriority }
     }
 
     fun updateGameState() {
@@ -113,13 +119,17 @@ class Engine(
 
     fun handleEvent(event: Event) {
         if (event is GameEvent) {
-            for (gc in gameComponents) {
-                gc.handleEvent(world, event)
+            for (gc in gameComponentsByEventPriority) {
+                if (! event.consumed) {
+                    gc.handleEvent(world, event)
+                }
             }
         }
 
-        for (dc in displayComponents) {
-            dc.handleEvent(world, event)
+        for (dc in displayComponentsByEventPriority) {
+            if (!event.consumed) {
+                dc.handleEvent(world, event)
+            }
         }
     }
 }

@@ -2,6 +2,20 @@ package arx.core
 
 import com.typesafe.config.ConfigValue
 import java.awt.Color
+import java.lang.Integer.min
+
+
+enum class RGBAChannel {
+    Red,
+    Green,
+    Blue,
+    Alpha;
+
+
+    companion object {
+        val colorChannels = arrayOf(Red, Green, Blue)
+    }
+}
 
 class RGBA(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var elem2: UByte = 0.toUByte(), var elem3: UByte = 0.toUByte()) {
     constructor(arg0: UInt, arg1: UInt, arg2: UInt, arg3: UInt) : this(arg0.toUByte(), arg1.toUByte(), arg2.toUByte(), arg3.toUByte()) {}
@@ -235,6 +249,15 @@ class RGBA(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var e
         }
     }
 
+    operator fun get(c : RGBAChannel): UByte {
+        return when (c) {
+            RGBAChannel.Red -> elem0
+            RGBAChannel.Green -> elem1
+            RGBAChannel.Blue -> elem2
+            RGBAChannel.Alpha -> elem3
+        }
+    }
+
     operator fun set(i: Int, t: UByte) {
         when (i) {
             0 -> elem0 = t
@@ -242,6 +265,15 @@ class RGBA(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var e
             2 -> elem2 = t
             3 -> elem3 = t
             else -> error("Attempted to set invalid element from 4 dimension vector")
+        }
+    }
+
+    operator fun set(i: RGBAChannel, t: UByte) {
+        when (i) {
+            RGBAChannel.Red -> elem0 = t
+            RGBAChannel.Green -> elem1 = t
+            RGBAChannel.Blue -> elem2 = t
+            RGBAChannel.Alpha -> elem3 = t
         }
     }
 
@@ -268,6 +300,19 @@ class RGBA(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var e
 
     fun magnitude(): Float = kotlin.math.sqrt((elem0 * elem0 + elem1 * elem1 + elem2 * elem2 + elem3 * elem3).toFloat())
 
+    fun minWith(other : RGBA) {
+        r = minu(other.r, r)
+        g = minu(other.g, g)
+        b = minu(other.b, b)
+        a = minu(other.a, a)
+    }
+
+    fun maxWith(other : RGBA) {
+        r = maxu(other.r, r)
+        g = maxu(other.g, g)
+        b = maxu(other.b, b)
+        a = maxu(other.a, a)
+    }
 
     fun toFloat(): Vec4f {
         return Vec4f(elem0.toFloat() / 255.0f, elem1.toFloat() / 255.0f, elem2.toFloat() / 255.0f, elem3.toFloat() / 255.0f)
@@ -294,6 +339,9 @@ class RGBA(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var e
         return result
     }
 
+    fun toHSL(): HSL {
+        return toHSL(this)
+    }
 }
 
 fun RGBA(r: Int, g: Int, b: Int, a: Int): RGBA {
@@ -307,6 +355,86 @@ fun RGBAf(v : Vec4f): RGBA {
     return RGBAf(v.r, v.g, v.b, v.a)
 }
 
+fun average(rgbas : Iterable<RGBA>) : RGBA {
+    val v = Vec4i()
+    var count = 0
+    for (c in rgbas) {
+        v.r += c.r.toInt()
+        v.g += c.g.toInt()
+        v.b += c.b.toInt()
+        v.a += c.a.toInt()
+        count += 1
+    }
+    return RGBA(
+        v.r / count,
+        v.g / count,
+        v.b / count,
+        v.a / count
+    )
+}
+
+fun HueToRGB(p: Float, q: Float, hIn: Float): Float {
+    var h = hIn
+    if (h < 0) h += 1f
+    if (h > 1) h -= 1f
+    if (6 * h < 1) {
+        return p + (q - p) * 6 * h
+    }
+    if (2 * h < 1) {
+        return q
+    }
+    return if (3 * h < 2) {
+        p + (q - p) * 6 * (2.0f / 3.0f - h)
+    } else p
+}
+fun fromHSL(v : Vec3f) : RGBA {
+    val h = v.x
+    val s = v.y
+    val l = v.z
+    val q = if (l < 0.5f){ l * (1f + s) } else { l + s - s * l }
+
+    val p: Float = 2f * l - q
+
+    var r = Math.max(0f, HueToRGB(p, q, h + 1.0f / 3.0f))
+    var g = Math.max(0f, HueToRGB(p, q, h))
+    var b = Math.max(0f, HueToRGB(p, q, h - 1.0f / 3.0f))
+
+    r = Math.min(r, 1.0f)
+    g = Math.min(g, 1.0f)
+    b = Math.min(b, 1.0f)
+
+    return RGBAf(r, g, b, 1.0f)
+}
+
+fun toHSL(c: RGBA): HSL {
+    val cf = c.toFloat()
+    val minc = kotlin.math.min(kotlin.math.min(cf.r, cf.g), cf.b)
+    val maxc = Math.max(Math.max(cf.r, cf.g), cf.b)
+
+    val h = if (maxc == minc) {
+        0.0f
+    } else if (maxc == cf.r) {
+        ((60.0f * (cf.g - cf.b) / (maxc - minc)) + 360.0f) % 360.0f
+    } else if (maxc == cf.g) {
+        (60.0f * (cf.b - cf.r) / (maxc - minc)) + 120.0f
+    } else {
+        (60.0f * (cf.r - cf.g) / (maxc - minc)) + 240.0f
+    }
+
+    val l = (maxc + minc) / 2.0f
+
+    val s = if (maxc == minc) {
+        0.0f
+    } else if (l <= 0.5f) {
+        (maxc - minc) / (maxc + minc)
+    } else {
+        (maxc - minc) / (2.0f - maxc - minc);
+    }
+
+    return HSL(h / 360.0f, s, l, c.a.toFloat() / 255.0f)
+}
+
+
 fun max(a : RGBA, b : RGBA) : RGBA {
     return RGBA(maxu(a.r,b.r), maxu(a.g,b.g), maxu(a.b,b.b), maxu(a.a,b.a))
 }
@@ -314,6 +442,7 @@ fun max(a : RGBA, b : RGBA) : RGBA {
 fun max(a : RGBA, b : RGBA, v : RGBA) {
     v(maxu(a.r,b.r), maxu(a.g,b.g), maxu(a.b,b.b), maxu(a.a,b.a))
 }
+
 
 val White = RGBA(255,255,255,255)
 val Black = RGBA(0,0,0,255)

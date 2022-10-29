@@ -27,10 +27,10 @@ enum class WidgetOrientation {
     companion object : FromConfigCreator<WidgetOrientation> {
         fun fromString(str: String): WidgetOrientation? {
             return when (str.lowercase()) {
-                "topleft", "left", "top" -> TopLeft
+                "topleft", "left", "top", "above" -> TopLeft
                 "bottomright" -> BottomRight
                 "topright", "right" -> TopRight
-                "bottomleft", "bottom" -> BottomLeft
+                "bottomleft", "bottom", "below" -> BottomLeft
                 "center" -> Center
                 else -> null
             }
@@ -360,8 +360,25 @@ data class NineWayImage(
     var drawCenter: Bindable<Boolean> = ValueBindable.True,
     var drawEdges: Bindable<Boolean> = ValueBindable.True,
     var color: Bindable<RGBA?> = ValueBindable.Null(),
+    var centerColor: Bindable<RGBA?> = ValueBindable.Null(),
     var edgeColor: Bindable<RGBA?> = ValueBindable.Null(),
 ) : FromConfig {
+
+    companion object : FromConfigCreator<NineWayImage> {
+        override fun createFromConfig(cv: ConfigValue?): NineWayImage? {
+            if (cv == null) { return null }
+            return NineWayImage(
+                image = bindableImage(cv["image"]),
+                scale = cv["scale"].asInt() ?: 1,
+                draw = bindableBool(cv["draw"]),
+                drawEdges = bindableBool(cv["drawEdges"]),
+                drawCenter = bindableBool(cv["drawCenter"]),
+                color = bindableRGBAOpt(cv["color"]),
+                edgeColor = bindableRGBAOpt(cv["edgeColor"]),
+                centerColor = bindableRGBAOpt(cv["centerColor"]),
+            )
+        }
+    }
     override fun readFromConfig(cv: ConfigValue) {
         cv["scale"].asInt()?.let { scale = it }
         cv["draw"]?.let{ draw = bindableBool(it) }
@@ -369,7 +386,21 @@ data class NineWayImage(
         cv["drawEdges"]?.let { drawEdges = bindableBool(it) }
         cv["color"]?.let { color = bindableRGBA(it) }
         cv["edgeColor"]?.let { edgeColor = bindableRGBA(it) }
+        cv["centerColor"]?.let { centerColor = bindableRGBA(it) }
         cv["image"]?.let { image = bindableImage(it) }
+    }
+
+    fun copy() : NineWayImage {
+        return NineWayImage(
+            image = image.copyBindable(),
+            scale = scale,
+            draw = draw.copyBindable(),
+            drawCenter = drawCenter.copyBindable(),
+            drawEdges = drawEdges.copyBindable(),
+            color = color.copyBindable(),
+            centerColor = centerColor.copyBindable(),
+            edgeColor = edgeColor.copyBindable()
+        )
     }
 }
 
@@ -384,18 +415,23 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
     private var childrenI: MutableList<Widget>? = null
     val children: List<Widget>
         get() {
-            if (childrenI != null && childSortNeeded) {
-                childrenI!!.sortBy { c -> -c.resZ }
-            }
             return childrenI ?: emptyList()
         }
-    private var childSortNeeded = false
+
+    fun sortChildren() {
+        childrenI?.sortBy { c -> c.resZ }
+    }
     private fun addChild(w: Widget) {
         if (childrenI == null) {
             childrenI = mutableListOf()
         }
         childrenI!!.add(w)
-        childSortNeeded = true
+        if (width == WidgetDimensions.WrapContent) {
+            markForUpdate(DimensionsX)
+        }
+        if (height == WidgetDimensions.WrapContent) {
+            markForUpdate(DimensionsY)
+        }
     }
     fun removeChild(w: Widget) {
         childrenI?.remove(w)
@@ -432,7 +468,7 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         WidgetPosition(cv["y"])?.let { y = it }
         WidgetPosition(cv["z"])?.let { z = it }
 
-        if (cv["type"].asStr() == "div") {
+        if (cv["type"].asStr()?.lowercase() == "div") {
             width = WidgetDimensions.WrapContent
             height = WidgetDimensions.WrapContent
         }
@@ -537,7 +573,8 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         }
         set(v) {
             if (position.x != v) {
-                markForUpdate(PositionX); position.x = v
+                markForUpdate(PositionX)
+                position.x = v
             }
         }
     var y: WidgetPosition
@@ -546,7 +583,8 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         }
         set(v) {
             if (position.y != v) {
-                markForUpdate(PositionY); position.y = v
+                markForUpdate(PositionY)
+                position.y = v
             }
         }
     var z: WidgetPosition
@@ -555,7 +593,8 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         }
         set(v) {
             if (position.z != v) {
-                markForUpdate(PositionZ); position.z = v
+                markForUpdate(PositionZ)
+                position.z = v
             }
         }
 
@@ -565,7 +604,8 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         }
         set(v) {
             if (dimensions.x != v) {
-                markForUpdate(DimensionsX); dimensions.x = v
+                markForUpdate(DimensionsX)
+                dimensions.x = v
             }
         }
     var height: WidgetDimensions
@@ -574,7 +614,8 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         }
         set(v) {
             if (dimensions.y != v) {
-                markForUpdate(DimensionsY); dimensions.y = v
+                markForUpdate(DimensionsY)
+                dimensions.y = v
             }
         }
 
@@ -795,7 +836,7 @@ internal inline fun forEachDimensionDep(w: Widget, axis: Axis, fn: (Widget, Depe
                         fn(w, DependencyKind.Dimensions, oppositeAxis(axis))
                     }
                 }
-                is WidgetDimensions.WrapContent -> {
+                WidgetDimensions.WrapContent -> {
                     for (c in w.children) {
                         fn(c, DependencyKind.PartialPosition, axis)
                         fn(c, DependencyKind.Dimensions, axis)

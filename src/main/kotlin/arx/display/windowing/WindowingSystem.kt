@@ -39,6 +39,9 @@ data class WidgetMouseDragEvent(override val widgets: MutableList<Widget>, val p
 
 interface WindowingComponent {
     fun dataTypes() : List<DataType<EntityData>> { return emptyList() }
+
+    fun initializeWidget(w: Widget) {}
+
     fun intrinsicSize(w: Widget, axis: Axis2D, minSize: Vec2i, maxSize: Vec2i): Int? {
         return null
     }
@@ -101,6 +104,7 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
         registerComponent(ListWidgetComponent)
         registerComponent(TextWindowingComponent)
         registerComponent(ImageDisplayWindowingComponent)
+        registerComponent(FocusWindowingComponent)
     }
 
     fun createWidget(): Widget {
@@ -111,6 +115,7 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
         val w = Widget(this, parent)
         widgets[w.entity.id] = w
         markForFullUpdate(w)
+        components.forEach { it.initializeWidget(w) }
         return w
     }
 
@@ -173,6 +178,8 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
             newChild.identifier = childIdent
         }
 
+        components.forEach { it.initializeWidget(w) }
+
         return w
     }
 
@@ -197,6 +204,7 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
             val cx = w.clientOffset(Axis.X)
             val cy = w.clientOffset(Axis.Y)
             val newBounds = bounds.intersect(Recti(w.resX + cx, w.resY + cy, w.resWidth - cx * 2, w.resHeight - cy * 2))
+            w.sortChildren()
             for (c in w.children) {
                 updateDrawData(c, newBounds, needsRerender)
             }
@@ -219,9 +227,6 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
     fun updateGeometry(size: Vec2i): Boolean {
         updateDesktop(size)
 
-        updateDependentRelationships()
-
-
         val finishedBindingUpdates = ObjectOpenHashSet<Widget>()
         val bindingsToUpdate = mutableListOf<Widget>()
         for ((w, update) in pendingUpdates) {
@@ -232,6 +237,8 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
         for (w in bindingsToUpdate) {
             recursivelyUpdateBindings(w, w.buildBindingContext(), finishedBindingUpdates)
         }
+
+        updateDependentRelationships()
 
         val requireRerender = ObjectOpenHashSet<Widget>()
         val requiredUpdates = recursivelyCollectRequiredDependencies(requireRerender)
@@ -634,6 +641,9 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
         for (callback in w.eventCallbacks) {
             if (callback(event)) {
                 event.consume()
+                if (event is WidgetEvent) {
+                    event.parentEvent?.consume()
+                }
                 return true
             }
         }
@@ -697,7 +707,7 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
 
         val target = when (event) {
             is MouseEvent -> lastWidgetUnderMouse
-            is KeyEvent -> focusedWidget ?: desktop
+            is KeyEvent, is CharInputEvent -> focusedWidget ?: desktop
             is WidgetEvent -> event.widget
             else -> focusedWidget ?: desktop
         }

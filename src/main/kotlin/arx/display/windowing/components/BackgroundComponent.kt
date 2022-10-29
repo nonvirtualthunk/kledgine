@@ -129,16 +129,16 @@ object BackgroundComponent : WindowingComponent {
             val id = ((img.dimensions + 2) / 3) * nw.scale
 
             if (nw.drawCenter()) {
-                out.add(centerQuad(w, img, nw.scale, nw.color(), beforeChildren))
+                out.add(centerQuad(w, img, nw.scale, nw.centerColor() ?: nw.color(), beforeChildren))
             }
 
             for (x in 0..1) {
                 for (y in 0..1) {
-                    out.add(cornerQuad(w, img, id, nw.color(), x, y, beforeChildren))
+                    out.add(cornerQuad(w, img, id, nw.edgeColor() ?: nw.color(), x, y, beforeChildren))
                 }
             }
             if (nw.drawEdges()) {
-                val c = nw.edgeColor()
+                val c = nw.edgeColor() ?: nw.color()
                 out.add(edgeQuad(w, img, id, c, -1, 0, beforeChildren))
                 out.add(edgeQuad(w, img, id, c, 1, 0, beforeChildren))
                 out.add(edgeQuad(w, img, id, c, 0, -1, beforeChildren))

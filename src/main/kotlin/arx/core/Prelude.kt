@@ -142,6 +142,26 @@ fun UInt.clamp(a : UInt, b: UInt) : UInt {
     return this
 }
 
+@Suppress("NOTHING_TO_INLINE")
+inline fun Double.max(o: Double) : Double {
+    return java.lang.Double.max(this, o)
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Float.max(o: Float) : Float {
+    return java.lang.Float.max(this, o)
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Double.min(o: Double) : Double {
+    return java.lang.Double.min(this, o)
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Float.min(o: Float) : Float {
+    return java.lang.Float.min(this, o)
+}
+
 fun Double.clamp(a : Double, b: Double) : Double {
     return kotlin.math.max(kotlin.math.min(this, b), a)
 }

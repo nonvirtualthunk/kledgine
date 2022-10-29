@@ -95,9 +95,10 @@ object ListWidgetComponent : WindowingComponent {
                     newItem.attachData(ListWidgetItem(value, i))
                     newItem.identifier = "${w.identifier}.item[$i]"
                     if (lw.selectable) {
-                        newItem.onEventDo<WidgetMouseReleaseEvent> { mre ->
+                        newItem.onEvent<WidgetMouseReleaseEvent> { mre ->
                             lw.selectedIndex = i
                             ws.fireEvent(ListItemSelected(mutableListOf(newItem), i, newItem[ListWidgetItem]?.data, mre))
+                            true
                         }
                     }
                     newItem.onEventDo<WidgetMouseEnterEvent> { mee ->

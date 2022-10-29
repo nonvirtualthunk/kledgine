@@ -41,6 +41,8 @@ object MapGeneratorComponent : GameComponent() {
                         listOf(createCharacter(t("CharacterClasses.Archer"), t("Factions.Player"), "Tobold"))
                     } else if (x == 2 && y == 6) {
                         listOf(createCharacter(t("CharacterClasses.Cultist"), t("Factions.Enemy"), "Cultist"))
+                    } else if (x == 3 && y == 8) {
+                        listOf(createCharacter(t("CharacterClasses.Cultist"), t("Factions.Enemy"), "Cultist"))
                     } else {
                         emptyList()
                     }

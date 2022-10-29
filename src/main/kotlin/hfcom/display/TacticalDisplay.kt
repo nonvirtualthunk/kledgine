@@ -1,5 +1,7 @@
 package hfcom.display
 
+import arx.application.disableCursor
+import arx.application.enableCursor
 import arx.core.*
 import arx.core.RGBA
 import arx.core.Resources.image
@@ -13,11 +15,45 @@ import arx.display.windowing.WindowingSystem
 import arx.engine.*
 import arx.engine.Event
 import hfcom.application.MainCamera
-import hfcom.display.TacticalMapComponent.updateMousedOverTile
 import hfcom.game.*
 import java.lang.Integer.max
 import java.lang.Integer.min
 import kotlin.math.roundToInt
+
+
+
+sealed interface SelectionStyle {
+    data class TargetSet(val possibleTargets : Set<EffectTarget>) : SelectionStyle {
+        val orderedPossibleTargets = possibleTargets.toList()
+    }
+
+    object Unlimited : SelectionStyle
+}
+class SelectionState {
+    var chosenTargets: List<EffectTarget> = listOf()
+    var previewTarget: EffectTarget? = null
+    var previewPathTiles: Set<MapCoord> = setOf()
+    var previewPath: Pathfinder.Path<MapCoord>? = null
+        set(s) {
+            field = s
+            previewPathTiles = s?.steps?.drop(1)?.toSet() ?: emptySet()
+        }
+    var selectionStyle : SelectionStyle = SelectionStyle.Unlimited
+
+    fun clear(clearPathing: Boolean = false, clearActionState: Boolean = false) {
+        if (clearActionState) {
+            chosenTargets = emptyList()
+            previewTarget = null
+        }
+        if (clearPathing) {
+            previewPath = null
+        }
+    }
+    fun clearPreviews() {
+        previewTarget = null
+        previewPath = null
+    }
+}
 
 object TacticalMapComponent : DisplayComponent() {
     val vao = VAO(MinimalVertex())
@@ -32,31 +68,22 @@ object TacticalMapComponent : DisplayComponent() {
         }
     var forceRedraw = false
     val activeActionWatcher: Watcher1<World, ActionIdentifier?> = Watcher1 {
-        selectedCharacter?.get(CharacterData)?.activeAction
+        selectedCharacter?.get(CharacterData)?.activeActionIdentifier
     }
+    val chosenTargetsWatcher = Watcher { selection.chosenTargets }
 
-    var previewPath: Pathfinder.Path<MapCoord>? = null
-    var previewPathTiles: Set<MapCoord> = setOf()
-    var chosenTargets: List<EffectTarget> = listOf()
-    var previewTarget: EffectTarget? = null
+    val selection = SelectionState()
 
     var previewUpdatePending = false
 
     var previewWidgets : MutableMap<Pair<EffectTarget, Effect>, Widget> = mutableMapOf()
     var noPreviewWidgets : Boolean = false
 
-    val actionsWidget = initWithWorld { this[WindowingSystem].createWidget("TacticalWidgets.ActionsWidget") }
+    val actionsWidget = initWithWorld { TacticalActionsWidget(this) }
 
     fun clearPreviewState(clearPathing: Boolean = true, clearActionState: Boolean = true) {
         forceRedraw = true
-        if (clearActionState) {
-            chosenTargets = emptyList()
-            previewTarget = null
-        }
-        if (clearPathing) {
-            previewPath = null
-            previewPathTiles = setOf()
-        }
+        selection.clear(clearPathing = clearPathing, clearActionState = clearActionState)
     }
 
     fun renderQuad(p: Vec3f, image: ImageRef, dimensions: Vec2f, drawColor : RGBA = White) {
@@ -97,8 +124,13 @@ object TacticalMapComponent : DisplayComponent() {
         } else {
             renderQuad(p, image("hfcom/display/ui/enemy_marker.png"), Vec2f(1.0f, 1.0f), allColor)
         }
-        if (previewTarget == EffectTarget.Entity(entity)) {
-            val outline = Sprites.imageOutline(cc.image, listOf(RGBA(123u, 14u, 14u, 255u), RGBA(170u, 29u, 29u, 255u), RGBA(193u, 62u, 62u, 255u)))
+        if (selection.previewTarget == EffectTarget.Entity(entity)) {
+            val palette = if (cd.faction == t("Factions.Player")) {
+                listOf(RGBA(14u, 123u, 14u, 255u), RGBA(29u, 170u, 29u, 255u), RGBA(62u, 193u, 62u, 255u))
+            } else {
+                listOf(RGBA(123u, 14u, 14u, 255u), RGBA(170u, 29u, 29u, 255u), RGBA(193u, 62u, 62u, 255u))
+            }
+            val outline = Sprites.imageOutline(cc.image, palette)
             renderQuad(p, outline, Vec2f(1.0f, 1.0f), allColor)
         }
         renderQuad(p, cc.image, Vec2f(1.0f, 1.0f), mainColor)
@@ -126,13 +158,24 @@ object TacticalMapComponent : DisplayComponent() {
 
     override fun update(world: World): Boolean {
         with(world) {
-            if (activeActionWatcher.hasChanged(world) || previewUpdatePending) {
+            val actionChanged = activeActionWatcher.hasChanged(world)
+            if (actionChanged || chosenTargetsWatcher.hasChanged()) {
+                updateSelectionStyle()
+            }
+
+            when (selection.selectionStyle) {
+                SelectionStyle.Unlimited -> enableCursor()
+                is SelectionStyle.TargetSet -> disableCursor()
+            }
+
+
+            if (actionChanged || previewUpdatePending) {
                 clearPreviewState()
                 updatePreviewedSelection()
             }
 
             this[WindowingSystem].desktop.bind("selectedCharacter", selectedCharacter?.let { it[CharacterData] })
-            updateActionsWidget()
+            actionsWidget().update()
 
             val AD = world.global(AnimationData)!!
             val animContext = AD.animationContext
@@ -165,12 +208,12 @@ object TacticalMapComponent : DisplayComponent() {
                             tile.terrains.getOrNull(z)?.ifPresent { terrain ->
                                 renderQuad(p, Terrains[terrain]!!.images[0].toImage(), Vec2f(1.0f, 1.0f))
 
-                                if (previewPathTiles.contains(MapCoord(x, y, z + 1))) {
+                                if (selection.previewPathTiles.contains(MapCoord(x, y, z + 1))) {
                                     renderQuad(p, image("hfcom/display/ui/tile_selection_blue.png"), Vec2f(1.0f, 1.0f))
                                 }
                             }
 
-                            if (mousedOverTile != null && mousedOverTile!!.x == x && mousedOverTile!!.y == y && mousedOverTile!!.z == z) {
+                            if (mousedOverTile == MapCoord(x,y,z) && selection.selectionStyle == SelectionStyle.Unlimited) {
                                 val tc = tb.getOrUpdate(image("hfcom/display/ui/tile_cursor.png"))
 
                                 for (q in 0 until 4) {
@@ -206,11 +249,6 @@ object TacticalMapComponent : DisplayComponent() {
                 return false
             }
         }
-    }
-
-    fun World.updateActionsWidget() {
-        val selc = selectedCharacter ?: return
-        actionsWidget().bind("actions", mapOf("activeAction" to activeAction(selc)))
     }
 
     override fun draw(world: World) {
@@ -250,69 +288,105 @@ object TacticalMapComponent : DisplayComponent() {
         val mc = mousedOverTile
         val tm = global(TacticalMap) ?: return
 
-        if (mc != null) {
-            previewTarget = null
-            previewPathTiles = setOf()
-            previewPath = null
-
-            val tile = tm.tiles[mc.xy]
-            selectedCharacter?.let { selc ->
+        selection.clearPreviews()
 
 
-                val pd = selc[Physical] ?: return Noto.err("selected character must be a physical entity")
-                val tileCoords = tile.occupiableZLevels(pd.size).map { z -> MapCoord(mc.xy, z) }.toList()
-                val tileTargets = tileCoords.map { EffectTarget.Tile(it) }
-                val entityTargets = tile.entities.map { EffectTarget.Entity(it) }
-                val possibleTargets = entityTargets + tileTargets
+        val selStyle = selection.selectionStyle
+
+        when (selStyle) {
+            is SelectionStyle.TargetSet -> {
+                if (selection.previewTarget == null && selStyle.possibleTargets.isNotEmpty()) {
+                    selection.previewTarget = selStyle.possibleTargets.iterator().next()
+                }
+            }
+            SelectionStyle.Unlimited -> {
+                if (mc != null) {
+                    val tile = tm.tiles[mc.xy]
+                    selectedCharacter?.let { selc ->
 
 
-                // if there's an active action then deal with that, otherwise deal with the implicit
-                // movement case
-                activeAction(selc).ifLet { action ->
-                    if (action.effects.isEmpty()) {
-                        // do nothing
-                    } else if (action.effects.size <= chosenTargets.size) {
-                        Noto.warn("action already has sufficient chosen targets, this seems like a bug")
-                    } else {
-                        val nextTargeting = action.effects[chosenTargets.size]
-                        for (target in possibleTargets) {
-                            if (nextTargeting.isValidTarget(this, selc, target)) {
-                                previewTarget = target
-                                break
+                        val pd = selc[Physical] ?: return Noto.err("selected character must be a physical entity")
+                        val tileCoords = tile.occupiableZLevels(pd.size).map { z -> MapCoord(mc.xy, z) }.toList()
+                        val tileTargets = tileCoords.map { EffectTarget.Tile(it) }
+                        val entityTargets = tile.entities.map { EffectTarget.Entity(it) }
+                        val possibleTargets = entityTargets + tileTargets
+
+
+                        // if there's an active action then deal with that, otherwise deal with the implicit
+                        // movement case
+                        activeAction(selc).ifLet { action ->
+                            if (action.effects.isEmpty()) {
+                                // do nothing
+                            } else if (action.effects.size <= selection.chosenTargets.size) {
+                                Noto.warn("action already has sufficient chosen targets, this seems like a bug")
+                            } else {
+                                val nextTargeting = action.effects[selection.chosenTargets.size]
+                                for (target in possibleTargets) {
+                                    if (nextTargeting.isValidTarget(this, selc, target)) {
+                                        selection.previewTarget = target
+                                        break
+                                    }
+                                }
+                            }
+                        }.orElse {
+                            val pathfinder = pathfinder(this, selc)
+                            val paths = tileCoords.mapNotNull { to ->
+                                val targets = if (entityTargets.isEmpty()) {
+                                    setOf(to)
+                                } else {
+                                    to.adjacent2D().toSet()
+                                        .flatMap { tm.tiles[it].occupiableZLevels(pd.size).map { z -> MapCoord(it, z) }.toList() }
+                                        .filter { tm.tiles[it.xy].entities.none { e -> e[Physical]?.position == it } }
+                                }
+                                pathfinder.findPath(selc[Physical]!!.position, { targets.contains(it) }, to)
+                            }
+                            if (paths.isNotEmpty()) {
+                                val shortestPath = paths.minBy { it.totalCost }
+                                val trimmedPath = shortestPath.subPath(maxCost = selc[CharacterData]?.ap ?: 0.0)
+                                selection.previewTarget = EffectTarget.Path(trimmedPath)
+
+                                selection.previewPath = trimmedPath
                             }
                         }
                     }
-                }.orElse {
-                    val pathfinder = pathfinder(this, selc)
-                    val paths = tileCoords.mapNotNull { to ->
-                        val targets = if (entityTargets.isEmpty()) {
-                            setOf(to)
-                        } else {
-                            to.adjacent2D().toSet()
-                                .flatMap { tm.tiles[it].occupiableZLevels(pd.size).map { z -> MapCoord(it, z) }.toList() }
-                                .filter { tm.tiles[it.xy].entities.none { e -> e[Physical]?.position == it } }
-                        }
-                        pathfinder.findPath(selc[Physical]!!.position, { targets.contains(it) }, to)
-                    }
-                    if (paths.isNotEmpty()) {
-                        val shortestPath = paths.minBy { it.totalCost }
-                        val trimmedPath = shortestPath.subPath(maxCost = selc[CharacterData]?.ap ?: 0.0)
-                        previewTarget = EffectTarget.Path(trimmedPath)
-
-                        previewPath = trimmedPath
-                        previewPathTiles = previewPath?.steps?.drop(1)?.toSet() ?: emptySet()
-                    }
                 }
             }
-        } else {
-            previewPath = null
-            previewPathTiles = setOf()
         }
 
         updatePreviewWidget()
 
-
         forceRedraw = true
+    }
+
+    fun World.updateSelectionStyle() {
+        selection.selectionStyle = SelectionStyle.Unlimited
+        val selc = selectedCharacter ?: return
+        val tm = global(TacticalMap) ?: return
+
+        activeAction(selc).ifLet { action ->
+            val nextTarget = action.effects.getOrNull(selection.chosenTargets.size) ?: return
+            var limitedSet : Set<EffectTarget>? = null
+            for (rule in nextTarget.targetingRules) {
+                val newLimitedSet = when (rule) {
+                    TargetKind.Self -> setOf(EffectTarget.Entity(selc))
+                    TargetKind.Enemy -> tm.entities.filterTo(HashSet()) { it[CharacterData]?.dead != true && isEnemy(it, selc) }.mapTo(HashSet()) { EffectTarget.Entity(it) }
+                    else -> null
+                }
+                if (newLimitedSet != null) {
+                    limitedSet = limitedSet.ifLet {
+                        it.intersect(newLimitedSet)
+                    }.orElse {
+                        newLimitedSet
+                    }
+                }
+            }
+
+            limitedSet?.let { set ->
+                selection.selectionStyle = SelectionStyle.TargetSet(set)
+            }
+        }.orElse {
+            // do nothing
+        }
     }
 
     fun World.updatePreviewWidget() {
@@ -323,10 +397,10 @@ object TacticalMapComponent : DisplayComponent() {
 
         if (selc != null && action != null) {
             for (i in action.effects.indices) {
-                val target = if (chosenTargets.size > i) {
-                    chosenTargets[i]
-                } else if (chosenTargets.size == i) {
-                    previewTarget
+                val target = if (selection.chosenTargets.size > i) {
+                    selection.chosenTargets[i]
+                } else if (selection.chosenTargets.size == i) {
+                    selection.previewTarget
                 } else {
                     null
                 }
@@ -381,6 +455,11 @@ object TacticalMapComponent : DisplayComponent() {
     }
 
     fun World.updateMousedOverTile(mc2d: MapCoord2D?) {
+        // if we're doing limited selection then we don't use the mouse
+        if (selection.selectionStyle is SelectionStyle.TargetSet) {
+            return
+        }
+
         val tm = this[TacticalMap]!!
 
         var mc: MapCoord? = null
@@ -399,30 +478,32 @@ object TacticalMapComponent : DisplayComponent() {
         }
     }
 
-    fun World.performPreviewedAction(position: MapCoord2D) {
+    fun World.choosePreviewedTarget() {
+        selectedCharacter?.let { selc ->
+            val action = activeAction(selc) ?: MoveAction
+
+            selection.previewTarget?.let { target ->
+                selection.chosenTargets = selection.chosenTargets + target
+                if (selection.chosenTargets.size == action.effects.size) {
+                    performAction(selc, action, selection.chosenTargets)
+                    selection.chosenTargets = emptyList()
+                    selc[CharacterData]?.let { cd -> cd.activeActionIdentifier = null }
+                }
+
+                selection.clear(clearPathing = true, clearActionState = true)
+
+                updatePreviewWidget()
+            }
+        }
+    }
+
+    fun World.selectCharacterAt(position : MapCoord2D) {
         val map = global(TacticalMap) ?: return
 
         val tile = map.tiles[position.x, position.y]
 
-        selectedCharacter.ifLet { selc ->
-            val action = activeAction(selc) ?: MoveAction
-
-            previewTarget?.let { target ->
-                chosenTargets = chosenTargets + target
-                if (chosenTargets.size == action.effects.size) {
-                    performAction(selc, action, chosenTargets)
-                    chosenTargets = emptyList()
-                    selc[CharacterData]?.let { cd -> cd.activeAction = null }
-                }
-
-                previewTarget = null
-                previewPath = null
-                previewPathTiles = setOf()
-            }
-        }.orElse {
-            tile.entities.find { it[CharacterData]?.faction == map.activeFaction }?.let {
-                selectedCharacter = it
-            }
+        tile.entities.find { it[CharacterData]?.faction == map.activeFaction }?.let {
+            selectedCharacter = it
         }
     }
 
@@ -459,7 +540,11 @@ object TacticalMapComponent : DisplayComponent() {
                     } else {}
                 }
                 is TMMouseReleaseEvent -> {
-                    world.performPreviewedAction(event.position)
+                    if (selectedCharacter == null) {
+                        selectCharacterAt(event.position)
+                    } else {
+                        choosePreviewedTarget()
+                    }
                 }
                 is TMMouseMoveEvent -> {
                     updateMousedOverTile(event.position)
@@ -472,21 +557,26 @@ object TacticalMapComponent : DisplayComponent() {
                                 startTurn(ent)
                             }
                         }
-                        Key.Key1 -> {
-                            selectedCharacter?.ifPresent { selc ->
-                                selc[CharacterData]?.ifPresent { cd ->
-                                    cd.activeAction = possibleActions(selc).keys.iterator().next()
-                                    println("Selected action: ${cd.activeAction}")
-                                }
-                            }
-                        }
                         Key.Escape -> {
                             selectedCharacter?.get(CharacterData)?.ifPresent { cd ->
-                                cd.activeAction = null
+                                cd.activeActionIdentifier = null
                             }
                         }
+                        Key.Enter -> choosePreviewedTarget()
                         else -> {
-                            // do nothing
+                            event.key.numeral?.let { i -> actionsWidget().selectIndex(i) }
+
+                            if (event.key == Key.Left || event.key == Key.Right) {
+                                val delta = if (event.key == Key.Left) { -1 } else { 1 }
+                                val selStyle = selection.selectionStyle
+                                if (selStyle is SelectionStyle.TargetSet && selStyle.possibleTargets.isNotEmpty()) {
+                                    val numTargets = selStyle.orderedPossibleTargets.size
+                                    val nextIndex = (selStyle.orderedPossibleTargets.indexOf(selection.previewTarget) + delta + numTargets * 2) % numTargets
+                                    selection.previewTarget = selStyle.orderedPossibleTargets.getOrNull(nextIndex)
+                                    forceRedraw = true
+                                    updatePreviewWidget()
+                                }
+                            }
                         }
                     }
                 }
@@ -497,6 +587,8 @@ object TacticalMapComponent : DisplayComponent() {
 
                 }
             }
+
+            {}
         }
     }
 }

@@ -1,5 +1,6 @@
 package arx.display.core
 
+import org.lwjgl.glfw.GLFW
 import org.lwjgl.opengl.GL15.*
 import org.lwjgl.opengl.GL30
 import org.lwjgl.opengl.GL30.GL_INVALID_FRAMEBUFFER_OPERATION
@@ -81,3 +82,4 @@ object GL {
         glBindTexture(GL_TEXTURE_2D, name)
     }
 }
+

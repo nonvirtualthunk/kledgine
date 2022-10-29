@@ -141,6 +141,18 @@ enum class Key(val keyCode: Int) {
             return codesToEnums[code] ?: Unknown
         }
     }
+
+    val isNumeral : Boolean get() {
+        return this.keyCode >= Key0.keyCode && this.keyCode <= Key9.keyCode
+    }
+
+    val numeral : Int? get() {
+        return if (isNumeral) {
+            this.keyCode - Key0.keyCode
+        } else {
+            null
+        }
+    }
 }
 
 enum class KeyModifier(val bitmask: Int) {

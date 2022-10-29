@@ -4,7 +4,6 @@ import arx.core.*
 import arx.engine.Entity
 import arx.engine.GameWorld
 import arx.engine.prettyString
-import hfcom.display.CharacterDeathAnimation
 import hfcom.display.MapCoord
 import hfcom.display.MapCoord2D
 import kotlin.math.max
@@ -30,6 +29,7 @@ fun GameWorld.createCharacter(cclass: Taxon, faction: Taxon, name: String?): Ent
 
 fun GameWorld.placeEntity(ent: Entity, at: MapCoord2D) {
     val tm = global(TacticalMap) ?: return
+    tm.entities.add(ent)
 
     val pd = ent[Physical] ?: return
 
@@ -149,7 +149,7 @@ fun GameWorld.possibleActions(ent: Entity): Map<ActionIdentifier, Action> {
 
     val ret = mutableMapOf<ActionIdentifier, Action>()
     for ((k, a) in possibleAttacks(ent)) {
-        ret[k] = Action(name = a.name, effects = listOf(TargetedEffect(Effect.AttackEffect(a), TargetKind.Enemy)), ap = a.ap)
+        ret[k] = Action(name = a.name, effects = listOf(TargetedEffect(Effect.AttackEffect(a), listOf(TargetKind.Enemy))), ap = a.ap)
     }
 
     val classSkills = cd.classLevels.flatMap { it.skills }
@@ -171,7 +171,7 @@ fun GameWorld.possibleActions(ent: Entity): Map<ActionIdentifier, Action> {
 
 fun GameWorld.activeAction(ent: Entity): Action? {
     val cd = ent[CharacterData] ?: return null
-    val ident = cd.activeAction ?: return null
+    val ident = cd.activeActionIdentifier ?: return null
     return possibleActions(ent)[ident]
 }
 
@@ -188,7 +188,7 @@ fun GameWorld.performAction(ent: Entity, action: Action, chosenTargets: List<Eff
         for (i in 0 until action.effects.size) {
             val effect = action.effects[i]
             val target = chosenTargets[i]
-            if (!applyEffect(ent, effect, target)) {
+            if (!applyEffect(ent, action, effect, target)) {
                 Noto.info("effect $effect could not be applied, not applying any further effects")
                 break
             }
@@ -199,7 +199,7 @@ fun GameWorld.performAction(ent: Entity, action: Action, chosenTargets: List<Eff
     }
 }
 
-fun GameWorld.applyEffect(ent: Entity, effect: TargetedEffect, target: EffectTarget) : Boolean {
+fun GameWorld.applyEffect(ent: Entity, action: Action, effect: TargetedEffect, target: EffectTarget) : Boolean {
     val eff = effect.effect
 
     fun strInfo() : String {
@@ -210,22 +210,7 @@ fun GameWorld.applyEffect(ent: Entity, effect: TargetedEffect, target: EffectTar
         is Effect.AttackEffect -> {
             when (target) {
                 is EffectTarget.Entity -> {
-                    val cd = target.entity[CharacterData] ?: return Noto.errAndReturn("target of attack was not a character ${strInfo()}", false)
-                    val hpLostBefore = cd.hpLost
-                    cd.hpLost += eff.attack.damage
-                    Noto.info("Character ${prettyString(target.entity)} attacked, dealt ${eff.attack.damage} damage, new hp ${effectiveCombatStats(target.entity).maxHP - cd.hpLost}")
-                    fireEvent(DamageTaken(target.entity, hpLostBefore, cd.hpLost))
-                    fireEvent(CharacterAttacked(ent, target.entity))
-
-                    if (cd.hpLost >= effectiveCombatStats(target.entity).maxHP) {
-                        cd.dead = true
-                        val pd = target.entity[Physical] ?: return Noto.errAndReturn("target of attack died, but was not a physical entity ${strInfo()}", false)
-                        val tm = global(TacticalMap) ?: return Noto.errAndReturn("somehow there's no tactical map ${strInfo()}", false)
-                        val tile = tm.tiles[pd.position.xy]
-                        tile.entities = tile.entities - target.entity
-                        fireEvent(CharacterDied(target.entity))
-                    }
-                    true
+                    attack(ent, target.entity, eff.attack)
                 }
                 else -> {
                     Noto.errAndReturn("Invalid target type for attack effect ${strInfo()}", false)
@@ -248,7 +233,7 @@ fun GameWorld.applyEffect(ent: Entity, effect: TargetedEffect, target: EffectTar
         is Effect.StatsEffect -> {
             when (target) {
                 is EffectTarget.Entity -> {
-                    target.entity[CharacterData].expectLet { cd -> cd.statsChanges = cd.statsChanges + StatsChange(stats = eff.stats, endCondition = eff.duration) }
+                    target.entity[CharacterData].expectLet { cd -> cd.statsChanges = cd.statsChanges + StatsChange(stats = eff.stats, endCondition = eff.duration, source = action.name) }
                     true
                 }
                 else -> {
