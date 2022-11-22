@@ -11,7 +11,7 @@ data class CharacterMoved(val character: Entity, val from: MapCoord, val to: Map
 data class CharacterUsedAP(val character : Entity, val apConsumed : Double, val apRemaining : Double) : GameEvent() {
     val apBefore : Double get() { return apRemaining + apConsumed }
 }
-data class CharacterPlaced(val character: Entity, val at : MapCoord) : GameEvent()
+data class EntityPlaced(val entity: Entity, val at : MapCoord) : GameEvent()
 
 data class CharacterPerformedAction(val character: Entity, val action: Action, val targets: List<EffectTarget>) : GameEvent()
 
@@ -25,6 +25,7 @@ data class DamageTaken(val character : Entity, val hpLostBefore : Int, val hpLos
 
 data class CharacterDied(val character : Entity) : GameEvent()
 
+data class VisibilityChange(val at : MapCoord) : GameEvent()
 
 data class TMMouseReleaseEvent(val position : MapCoord2D, val button : MouseButton, val source : MouseReleaseEvent) : DisplayEvent(source)
 data class TMMousePressEvent(val position : MapCoord2D, val button : MouseButton, val source : MousePressEvent) : DisplayEvent(source)

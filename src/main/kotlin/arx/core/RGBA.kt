@@ -83,6 +83,13 @@ class RGBA(var elem0: UByte = 0.toUByte(), var elem1: UByte = 0.toUByte(), var e
         elem3 = arg3
     }
 
+    operator fun invoke(arg0: Int, arg1: Int, arg2: Int, arg3: Int) {
+        elem0 = arg0.toUByte()
+        elem1 = arg1.toUByte()
+        elem2 = arg2.toUByte()
+        elem3 = arg3.toUByte()
+    }
+
     operator fun invoke(other : RGBA) {
         elem0 = other.elem0
         elem1 = other.elem1

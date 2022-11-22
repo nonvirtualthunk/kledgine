@@ -23,6 +23,10 @@ interface ImageRef {
                 SentinelImageRef
             }
         }
+
+        operator fun invoke(str : String) : ImageRef {
+            return ImagePath(str)
+        }
     }
 }
 
@@ -81,6 +85,8 @@ open class Image internal constructor() : ImageRef {
     var path : String? = null
     var destroyed: Boolean = false
 
+
+    val aspectRatio : Float get() { return width.toFloat() / height.toFloat() }
     private inline fun offset(x: Int, y: Int): Int = y * ymult + (x shl 2)
 
     override fun toImage(): Image {

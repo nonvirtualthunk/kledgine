@@ -2,16 +2,18 @@ Items {
 
 
   Longsword {
-    encumbrance : 1
-    speed : -1
-    defence : 1
+    combatStats {
+      encumbrance: 1
+      speed: -1
+      defence: 1
+    }
 
     slots : [ItemSlots.Hand]
 
     attacks : [{
       name : "Slash"
       accuracy : 1
-      range : 0
+      range : 1
       ammunition : 0
       damage : 4
       ap : 5
@@ -19,9 +21,11 @@ Items {
   }
 
   Bow {
-    encumbrance : 1
-    speed : -1
-    defence : -3
+    combatStats {
+      encumbrance: 1
+      speed: -1
+      defence: -3
+    }
 
     slots : [ItemSlots.Hand, ItemSlots.Hand]
 
@@ -36,20 +40,42 @@ Items {
   }
 
   Dagger {
-    encumbrance : 0
-    speed : 0
-    defence : 1
+    combatStats {
+      encumbrance: 0
+      speed: 0
+      defence: 1
+    }
 
     slots : [ItemSlots.Hand]
 
     attacks : [{
       name : "Stab"
       accuracy : 1
-      range : 0
+      range : 1
       ammunition : 0
       damage : 2
       ap : 4
     }]
+  }
+
+  RoundShield {
+    combatStats {
+      encumbrance: 1
+      speed: -1
+      defence: 1
+      protection: 1
+    }
+
+    slots : [ItemSlots.Hand]
+  }
+
+  ChainArmor {
+    combatStats {
+      encumbrance: 2
+      speed: -1
+      defence: 0
+      protection: 1
+    }
   }
 
 }

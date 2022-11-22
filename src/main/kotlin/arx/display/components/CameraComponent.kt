@@ -21,7 +21,7 @@ operator fun Cameras?.get (c: CameraID) : Camera {
 
 object CameraComponent : DisplayComponent() {
     init {
-        eventPriority = EventPriority.Last
+        eventPriority = Priority.Last
     }
 
     override fun initialize(world: World) {

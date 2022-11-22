@@ -3,7 +3,8 @@ package arx.engine
 
 abstract class EngineComponent {
     var engine : Engine? = null
-    var eventPriority : EventPriority = EventPriority.Normal
+    var eventPriority : Priority = Priority.Normal
+    var initializePriority : Priority = Priority.Normal
 
     fun fireEvent(event : Event) {
         engine!!.handleEvent(event)
@@ -11,7 +12,7 @@ abstract class EngineComponent {
 }
 
 
-enum class EventPriority {
+enum class Priority {
     Last,
     VeryLow,
     Low,
@@ -84,10 +85,10 @@ class Engine(
     }
 
     fun initialize() {
-        for (gc in gameComponents) {
+        for (gc in gameComponents.sortedByDescending { it.initializePriority }) {
             gc.initialize(world)
         }
-        for (dc in displayComponents) {
+        for (dc in displayComponents.sortedByDescending { it.initializePriority }) {
             dc.initialize(world)
         }
 

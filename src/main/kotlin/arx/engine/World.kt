@@ -20,6 +20,14 @@ val DataTypesByClass = ConcurrentHashMap<KClass<*>, DataType<*>>()
 
 typealias EntityId = Int
 
+interface EntityWrapper {
+    val entity : Entity
+}
+
+interface EntityWithData<T> {
+    val entity : Entity
+}
+
 @JvmInline
 value class Entity(val id: EntityId) {
     companion object {
@@ -444,11 +452,17 @@ class WorldT<in B : EntityData> : WorldViewT<B> {
         }
     }
 
+
+    operator fun <T> EntityWithData<T>.get(dt: DataType<T>) : T where T : B {
+        return this@WorldT.data(this.entity, dt)!!
+    }
     operator fun <T> Entity.get(dt: DataType<T>) : T? where T : B {
         return this@WorldT.data(this, dt)
     }
 
-
+    operator fun <T> EntityWrapper.get(dt: DataType<T>) : T? where T : B {
+        return this@WorldT.data(this.entity, dt)
+    }
 
     fun <T : B> Entity.attachData(t: T) {
         return this@WorldT.attachData(this, t)

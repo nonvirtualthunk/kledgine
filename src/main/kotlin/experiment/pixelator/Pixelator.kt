@@ -603,7 +603,7 @@ object Pixelator {
             val palette = extractKMeansPalette(srcImg, FiniteGrid2D(srcImg.dimensions, 1), paletteSize, 20)
             printTime("Iniital kMeans")
 
-            val kMeansImage = computeReducedPaletteImageMinErr(srcImg, outDims, palette, { _,_ -> ErrorAccum.Sum }) { _, _, _, _, rawColor, paletteColor ->
+            val kMeansImage = computeReducedPaletteImageMinErr(srcImg, outDims, palette, ditherWeight, { _,_ -> ErrorAccum.Sum }) { _, _, _, _, rawColor, paletteColor ->
                 colorDistance2(rawColor, paletteColor).toDouble()
             }
             printTime("kMeans image")
@@ -686,7 +686,7 @@ object Pixelator {
             stages += "AdjustedPalette" to adjustedPaletteImage
             printTime("Palette images")
 
-            val contrastAdjustedImage = computeReducedPaletteImageMinErr(srcImg, outDims, adjustedPalette, {x,y ->
+            val contrastAdjustedImage = computeReducedPaletteImageMinErr(srcImg, outDims, adjustedPalette, ditherWeight, {x,y ->
                 if (contrastDelta[x, y].r > 50u || contrastDelta[x, y].g > 50u) {
                     ErrorAccum.Sum
                 } else {
@@ -767,7 +767,7 @@ object Pixelator {
 
     val atkinsonDV = arrayOf(Vec2i(1,0), Vec2i(2,0), Vec2i(0,1), Vec2i(0,2), Vec2i(1,1), Vec2i(1,-1))
 
-    private fun computeReducedPaletteImageMinErr(srcImg: Image, outDims: Vec2i, palette: List<RGBA>, accumFn : (Int,Int) -> ErrorAccum,  errorFn: (Int, Int, Int, Int, RGBA, RGBA) -> Double): Image {
+    private fun computeReducedPaletteImageMinErr(srcImg: Image, outDims: Vec2i, palette: List<RGBA>, ditherWeight : Float, accumFn : (Int,Int) -> ErrorAccum,  errorFn: (Int, Int, Int, Int, RGBA, RGBA) -> Double): Image {
         val paletteSize = palette.size
         val scale = srcImg.width /  outDims.x
         val result = Image.ofSize(outDims.x, outDims.y)
@@ -785,7 +785,7 @@ object Pixelator {
 
             for (i in error.indices) {
                 error[i] = when (accum) {
-                    ErrorAccum.Sum -> diffusedError[x,y][i]
+                    ErrorAccum.Sum -> diffusedError[x,y][i] * ditherWeight
                     ErrorAccum.Min -> Double.MAX_VALUE
                 }
             }

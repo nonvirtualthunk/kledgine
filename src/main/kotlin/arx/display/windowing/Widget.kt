@@ -551,6 +551,13 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         windowingSystem.markForFullUpdate(this)
     }
 
+    fun markForFullUpdateAndAllDescendants() {
+        windowingSystem.markForFullUpdate(this)
+        for (c in children) {
+            c.markForFullUpdateAndAllDescendants()
+        }
+    }
+
     fun position(axis: Axis): WidgetPosition {
         return position[axis]
     }

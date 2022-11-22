@@ -81,19 +81,19 @@ fun main() {
                     val scalarAssign = (0 until arity).map { i -> "elem$i = (elem$i ${op.operatorChar} scalar)$castSuffix" }.joinToString("\n\t\t")
 
                     """
-        operator fun ${op.operatorName}(other : $typeName) : $typeName {
+        open operator fun ${op.operatorName}(other : $typeName) : $typeName {
             return $typeName($piecewise)
         }
         
-        operator fun ${op.operatorName}Assign(other : $typeName) {
+        open operator fun ${op.operatorName}Assign(other : $typeName) {
             $piecewiseAssign
         }
         
-        operator fun ${op.operatorName}(scalar : $scalarType) : $typeName {
+        open operator fun ${op.operatorName}(scalar : $scalarType) : $typeName {
             return $typeName($scalar)
         }
         
-        operator fun ${op.operatorName}Assign(scalar : $scalarType) {
+        open operator fun ${op.operatorName}Assign(scalar : $scalarType) {
             $scalarAssign
         }
                     """
@@ -142,7 +142,7 @@ fun main() {
                 val invokeArgs = (0 until arity).map { "arg$it : ${dt.type}" }.joinToString(", ")
                 val invokeAssign = (0 until arity).map { "elem$it = arg$it" }.joinToString("\n")
                 val invoke = """
-        operator fun invoke($invokeArgs) {
+        open operator fun invoke($invokeArgs) {
             $invokeAssign
         }
                 """
@@ -151,33 +151,33 @@ fun main() {
 
                 val getterCases = (0 until arity).joinToString("\n") { "\t\t\t\t$it -> elem$it" }
                 val getter = """
-        operator fun get(i: Int) : ${dt.type} {
+        open operator fun get(i: Int) : ${dt.type} {
             return when(i) {
                 $getterCases
                 else -> error("Attempted to retrieve invalid element from $arity dimension vector")
             }
         }
         
-        operator fun set(i: Int, t: ${dt.type}) {
+        open operator fun set(i: Int, t: ${dt.type}) {
             when(i) {
                 $setterCases
                 else -> error("Attempted to set invalid element from $arity dimension vector")
             }
         }
         
-        operator fun get(axis: Axis) : ${dt.type} {
+        open operator fun get(axis: Axis) : ${dt.type} {
             return get(axis.ordinal)            
         }
         
-        operator fun get(axis: Axis2D) : ${dt.type} {
+        open operator fun get(axis: Axis2D) : ${dt.type} {
             return get(axis.ordinal)            
         }
         
-        operator fun set(axis: Axis, t: ${dt.type}) {
+        open operator fun set(axis: Axis, t: ${dt.type}) {
             return set(axis.ordinal, t)            
         }
         
-        operator fun get(axis: Axis2D, t : ${dt.type}) {
+        open operator fun get(axis: Axis2D, t : ${dt.type}) {
             return set(axis.ordinal, t)            
         }
                 """
@@ -279,33 +279,33 @@ fun main() {
 
         val getterCases = (0 until arity).joinToString("\n") { "\t\t\t\t$it -> elem$it" }
         val getter = """
-        operator fun get(i: Int) : T {
+        open operator fun get(i: Int) : T {
             return when(i) {
                 $getterCases
                 else -> error("Attempted to retrieve invalid element from $arity dimension vector")
             }
         }
         
-        operator fun set(i: Int, t: T) {
+        open operator fun set(i: Int, t: T) {
             when(i) {
                 $setterCases
                 else -> error("Attempted to set invalid element from $arity dimension vector")
             }
         }
         
-        operator fun get(axis: Axis) : T {
+        open operator fun get(axis: Axis) : T {
             return get(axis.ordinal)            
         }
         
-        operator fun get(axis: Axis2D) : T {
+        open operator fun get(axis: Axis2D) : T {
             return get(axis.ordinal)            
         }
         
-        operator fun set(axis: Axis, t : T) {
+        open operator fun set(axis: Axis, t : T) {
             return set(axis.ordinal, t)            
         }
         
-        operator fun set(axis: Axis2D, t : T) {
+        open operator fun set(axis: Axis2D, t : T) {
             return set(axis.ordinal, t)            
         }
                 """
@@ -314,7 +314,7 @@ fun main() {
         val invokeArgs = (0 until arity).map { "arg$it : T" }.joinToString(", ")
         val invokeAssign = (0 until arity).map { "elem$it = arg$it" }.joinToString("\n")
         val invoke = """
-        operator fun invoke($invokeArgs) {
+        open operator fun invoke($invokeArgs) {
             $invokeAssign
         }
         

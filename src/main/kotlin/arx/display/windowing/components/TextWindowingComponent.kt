@@ -164,7 +164,7 @@ object TextWindowingComponent : WindowingComponent {
     override fun render(ws: WindowingSystem, w: Widget, bounds: Recti, quadsOut: MutableList<WQuad>) {
         val td = w[TextDisplay] ?: return
 
-        val region = Recti(w.resClientX, w.resClientY, w.resClientWidth + 1, w.resClientHeight + 1)
+        val region = Recti(w.resClientX, w.resClientY, w.resClientWidth + 2, w.resClientHeight + 1)
         val layout = layoutCache.getOrPut(params(td, region, td.horizontalAlignment))
 
         for (squad in layout.quads) {

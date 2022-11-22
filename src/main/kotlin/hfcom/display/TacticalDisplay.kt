@@ -14,12 +14,13 @@ import arx.display.windowing.WidgetPosition
 import arx.display.windowing.WindowingSystem
 import arx.engine.*
 import arx.engine.Event
+import arx.game.core.GameTime
 import hfcom.application.MainCamera
 import hfcom.game.*
 import java.lang.Integer.max
 import java.lang.Integer.min
 import kotlin.math.roundToInt
-
+import kotlin.math.sign
 
 
 sealed interface SelectionStyle {
@@ -61,15 +62,14 @@ object TacticalMapComponent : DisplayComponent() {
     val shader = Resources.shader("hfcom/shaders/world")
 
     var mousedOverTile: MapCoord? = null
+    var mousedOverColumn: MapCoord2D? = null
+    var mousedOverTargetHeight : Int = 0
     var selectedCharacter: Entity? = null
-        set(selc) {
-            field = selc
-            clearPreviewState()
-        }
     var forceRedraw = false
     val activeActionWatcher: Watcher1<World, ActionIdentifier?> = Watcher1 {
         selectedCharacter?.get(CharacterData)?.activeActionIdentifier
     }
+    val worldChangeWatcher: Watcher1<World, Long> = Watcher1 { this[GameTime].gameEvents }
     val chosenTargetsWatcher = Watcher { selection.chosenTargets }
 
     val selection = SelectionState()
@@ -77,13 +77,14 @@ object TacticalMapComponent : DisplayComponent() {
     var previewUpdatePending = false
 
     var previewWidgets : MutableMap<Pair<EffectTarget, Effect>, Widget> = mutableMapOf()
-    var noPreviewWidgets : Boolean = false
 
-    val actionsWidget = initWithWorld { TacticalActionsWidget(this) }
+    val actionUI = initWithWorld { TacticalActionsWidget(this) }
+    val invalidActionWidget = initWithWorld { this[WindowingSystem].createWidget("TacticalWidgets.InvalidActionWidget") }
 
     fun clearPreviewState(clearPathing: Boolean = true, clearActionState: Boolean = true) {
         forceRedraw = true
         selection.clear(clearPathing = clearPathing, clearActionState = clearActionState)
+        previewUpdatePending = true
     }
 
     fun renderQuad(p: Vec3f, image: ImageRef, dimensions: Vec2f, drawColor : RGBA = White) {
@@ -98,84 +99,174 @@ object TacticalMapComponent : DisplayComponent() {
         vao.addIQuad()
     }
 
+    fun renderQuadSection(p: Vec3f, image: ImageRef, dimensions: Vec2f, subsection : Rectf, drawColor : RGBA = White) {
+        val tc = tb.getOrUpdate(image.toImage())
+        val tcV = Vec2f()
+        val v = Vec3f()
+        for (q in 0 until 4) {
+            tc.subRectTexCoord(subsection, q, tcV)
+            vao.addV().apply {
+
+                v.x = p.x - 0.5f * dimensions.x + subsection.x * dimensions.x + UnitSquare3D[q].x * subsection.width * dimensions.x
+                v.y = p.y - 0.5f * dimensions.y + subsection.y * dimensions.y + UnitSquare3D[q].y * subsection.height * dimensions.y
+                v.z = p.z
+
+                vertex = v
+                texCoord = tcV
+                color = drawColor
+            }
+        }
+        vao.addIQuad()
+    }
+
     fun renderUIQuad(p: Vec3f, image: ImageRef) {
         val img = image.toImage()
         val dim = Vec2f(img.width.toFloat() / 32.0f, img.height.toFloat() / 32.0f)
         renderQuad(p, image, dim)
     }
 
-    fun World.renderEntity(entity: Entity, animContext: AnimationContext, p: Vec3f) {
-        val cd = entity[CharacterData] ?: return
+    fun World.renderEntity(tm : TacticalMap, entity: Entity, animContext: AnimationContext, mc : MapCoord, p: Vec3f, visibilityColor: RGBA) {
+        if (visibilityColor.toFloat().r < 0.25f) {
+            return
+        }
+
         val pd = entity[Physical] ?: return
-        val cc = CharacterClasses[cd.characterClass] ?: return
 
+        val cd = entity[CharacterData]
+        if (cd != null) {
+            val cc = CharacterClasses[cd.characterClass] ?: return
 
-        val deadness = if (cd.dead) {
-            animContext.animationsForEntityAndType(entity, CharacterDeathAnimation::class)?.f ?: 1.0f
-        } else {
-            0.0f
-        }
-
-        val allColor = ((1.0f - deadness) * 255).toUInt().clamp(0u, 255u).let { RGBA(it,it,it,it) }
-        val mainColor = (animContext.animationsForEntityAndType(entity, TintAnimation::class)?.currentColor() ?: White) * allColor
-
-        if (cd.faction == t("Factions.Player")) {
-            renderQuad(p, image("hfcom/display/ui/friendly_marker.png"), Vec2f(1.0f, 1.0f), allColor)
-        } else {
-            renderQuad(p, image("hfcom/display/ui/enemy_marker.png"), Vec2f(1.0f, 1.0f), allColor)
-        }
-        if (selection.previewTarget == EffectTarget.Entity(entity)) {
-            val palette = if (cd.faction == t("Factions.Player")) {
-                listOf(RGBA(14u, 123u, 14u, 255u), RGBA(29u, 170u, 29u, 255u), RGBA(62u, 193u, 62u, 255u))
+            val deadness = if (cd.dead) {
+                animContext.animationsForEntityAndType(entity, CharacterDeathAnimation::class)?.f ?: 1.0f
             } else {
-                listOf(RGBA(123u, 14u, 14u, 255u), RGBA(170u, 29u, 29u, 255u), RGBA(193u, 62u, 62u, 255u))
+                0.0f
             }
-            val outline = Sprites.imageOutline(cc.image, palette)
-            renderQuad(p, outline, Vec2f(1.0f, 1.0f), allColor)
-        }
-        renderQuad(p, cc.image, Vec2f(1.0f, 1.0f), mainColor)
 
-        if (selectedCharacter == entity) {
-            renderQuad(p + Vec3f(0.0f, 0.5f, 0.0f), image("hfcom/display/ui/selection_arrow.png"), Vec2f(0.25f, 0.25f))
-        }
+            val allColor = ((1.0f - deadness) * 255).toUInt().clamp(0u, 255u).let { RGBA(it, it, it, it) } * visibilityColor
+            val mainColor = (animContext.animationsForEntityAndType(entity, TintAnimation::class)?.currentColor() ?: White) * allColor
 
-        val maxHP = effectiveCombatStats(entity).maxHP
-        val hpLost = animContext.animationsForEntityAndType(entity, DamageAnimation::class)?.currentHPLost() ?: cd.hpLost
-        val curHP = maxHP - hpLost
-        val hpImg = image("hfcom/display/ui/hp_point_small.png")
-        val lostHpImg = image("hfcom/display/ui/hp_point_small_frame.png")
-        val hpDim = hpImg.dimensions.toFloat() / 48.0f
-        val hpOffset = (hpImg.dimensions.x - 1).toFloat() / 48.0f
-        for (i in 0 until maxHP) {
-            val img = if (i < curHP) {
-                hpImg
+            if (cd.faction == t("Factions.Player")) {
+                renderQuad(p, image("hfcom/display/ui/friendly_marker.png"), Vec2f(1.0f, 1.0f), allColor)
             } else {
-                lostHpImg
+                renderQuad(p, image("hfcom/display/ui/enemy_marker.png"), Vec2f(1.0f, 1.0f), allColor)
             }
-            renderQuad(p + MapCoord.project(0, 0, 1) + Vec3f((hpOffset * maxHP) * -0.5f + hpOffset * i.toFloat(), 0.15f, 0.0f), img, hpDim, allColor)
+            if (selection.previewTarget == EffectTarget.Entity(entity)) {
+                val palette = if (cd.faction == t("Factions.Player")) {
+                    listOf(RGBA(14u, 123u, 14u, 255u), RGBA(29u, 170u, 29u, 255u), RGBA(62u, 193u, 62u, 255u))
+                } else {
+                    listOf(RGBA(123u, 14u, 14u, 255u), RGBA(170u, 29u, 29u, 255u), RGBA(193u, 62u, 62u, 255u))
+                }
+                val outline = Sprites.imageOutline(cc.image, palette)
+                renderQuad(p, outline, Vec2f(1.0f, 1.0f), allColor)
+            }
+            renderQuad(p, cc.image, Vec2f(1.0f, 1.0f), mainColor)
+
+            if (selectedCharacter == entity) {
+                renderQuad(p + Vec3f(0.0f, 0.5f, 0.0f), image("hfcom/display/ui/selection_arrow.png"), Vec2f(0.25f, 0.25f))
+            }
+
+            val maxHP = effectiveCombatStats(entity).maxHP
+            val hpLost = animContext.animationsForEntityAndType(entity, DamageAnimation::class)?.currentHPLost() ?: cd.hpLost
+            val curHP = maxHP - hpLost
+            val hpImg = image("hfcom/display/ui/hp_point_small.png")
+            val lostHpImg = image("hfcom/display/ui/hp_point_small_frame.png")
+            val hpDim = hpImg.dimensions.toFloat() / 48.0f
+            val hpOffset = (hpImg.dimensions.x - 1).toFloat() / 48.0f
+            for (i in 0 until maxHP) {
+                val img = if (i < curHP) {
+                    hpImg
+                } else {
+                    lostHpImg
+                }
+                renderQuad(p + MapCoord.project(0, 0, 1) + Vec3f((hpOffset * maxHP) * -0.5f + hpOffset * i.toFloat(), 0.15f, 0.0f), img, hpDim, allColor)
+            }
+        } else {
+            val od = entity[Object] ?: return
+            val id = entity[Identity] ?: return
+
+            when(od.display) {
+                is ObjectDisplay.Simple -> {
+                    val img = od.display.image.toImage()
+//                    val wf = img.width / 32.0f
+//                    val hf = img.height / 32.0f
+                    val wf = 1.0f
+                    val hf = 1.0f
+                    renderQuad(p, img, Vec2f(wf, hf), od.display.color * visibilityColor)
+                }
+                is ObjectDisplay.Wall -> {
+                    val neighborWalls = BooleanArray(4) { false }
+                    var i = 0
+                    // SE, NW, SW, NE
+                    val SE = 0
+                    val NW = 1
+                    val SW = 2
+                    val NE = 3
+
+                    for (dv in arrayOf(Vec2i(0,-1), Vec2i(0,1), Vec2i(-1, 0), Vec2i(1,0))) {
+                        val tile = tm.tiles[mc.x + dv.x, mc.y + dv.y]
+                        neighborWalls[i++] = tile.entities.any { e ->
+                            val obj = e[Object] ?: return@any false
+                            obj.display is ObjectDisplay.Wall
+                        }
+                    }
+
+                    val seNwDiagonal = neighborWalls[SE] && neighborWalls[NW]
+                    val swNeDiagonal = neighborWalls[SW] && neighborWalls[NE]
+
+                    if (seNwDiagonal && ! neighborWalls[SW] && ! neighborWalls[NE]) {
+                        renderQuad(p, od.display.seToNw.toImage(), Vec2f(1.0f,1.0f), od.display.color * visibilityColor)
+                    } else if (swNeDiagonal && ! neighborWalls[SE] && ! neighborWalls[NW]) {
+                        renderQuad(p, od.display.swToNe.toImage(), Vec2f(1.0f,1.0f), od.display.color * visibilityColor)
+                    } else {
+                        if (neighborWalls[NW]) {
+                            renderQuadSection(p, od.display.seToNw.toImage(), Vec2f(1.0f,1.0f), Rectf(0.0f,0.0f,0.5f,1.0f), od.display.color * visibilityColor)
+                        }
+                        if (neighborWalls[NE]) {
+                            renderQuadSection(p, od.display.swToNe.toImage(), Vec2f(1.0f,1.0f), Rectf(0.5f,0.0f,0.5f,1.0f), od.display.color * visibilityColor)
+                        }
+
+                        renderQuad(p, od.display.pillar.toImage(), Vec2f(1.0f,1.0f), od.display.color * visibilityColor)
+
+                        if (neighborWalls[SE]) {
+                            renderQuadSection(p, od.display.seToNw.toImage(), Vec2f(1.0f,1.0f), Rectf(0.6f,0.0f,0.4f,1.0f), od.display.color * visibilityColor)
+                        }
+                        if (neighborWalls[SW]) {
+                            renderQuadSection(p, od.display.swToNe.toImage(), Vec2f(1.0f,1.0f), Rectf(0.0f,0.0f,0.4f,1.0f), od.display.color * visibilityColor)
+                        }
+                    }
+
+
+                    // (x + 1) = NE
+                    // (y + 1) = NW
+
+
+                }
+            }
         }
+    }
+
+    fun World.renderAnimationSprite(sprite: AnimationSprite) {
+        renderQuad(sprite.position.project(), sprite.image, sprite.dimensions, sprite.color)
     }
 
     override fun update(world: World): Boolean {
         with(world) {
+            val ws = this[WindowingSystem]
+
             val actionChanged = activeActionWatcher.hasChanged(world)
             if (actionChanged || chosenTargetsWatcher.hasChanged()) {
                 updateSelectionStyle()
             }
 
-            when (selection.selectionStyle) {
-                SelectionStyle.Unlimited -> enableCursor()
-                is SelectionStyle.TargetSet -> disableCursor()
-            }
-
-
             if (actionChanged || previewUpdatePending) {
                 clearPreviewState()
                 updatePreviewedSelection()
             }
+            updatePreviewWidgetPositions()
 
-            this[WindowingSystem].desktop.bind("selectedCharacter", selectedCharacter?.let { it[CharacterData] })
-            actionsWidget().update()
+
+            ws.desktop.bind("selectedCharacter", selectedCharacter?.let { it[CharacterData] })
+            actionUI().update()
 
             val AD = world.global(AnimationData)!!
             val animContext = AD.animationContext
@@ -187,8 +278,34 @@ object TacticalMapComponent : DisplayComponent() {
 
                 val p = Vec3f()
 
+
+                val spritesByPosition = Multimap<MapCoord2D, AnimationSprite>()
+                for (anim in animContext.animations()) {
+                    if (anim is SpriteAnimation) {
+                        for (sprite in anim.sprites()) {
+                            spritesByPosition.put(sprite.position.toMapCoord2D(), sprite)
+                        }
+                    }
+                }
+
+                val visions = playerCharacters().map { c ->
+                    val pos = (animContext.animatedPositionFor(c.entity)?.toMapCoord() ?: c.physical.position) + MapCoord(0,0, c.physical.size - 1)
+                    characterVisionAt(c.entity, pos)
+                }.toList()
+
                 for (x in (tm.tiles.dimensions.x - 1) downTo 0) {
                     for (y in (tm.tiles.dimensions.y - 1) downTo 0) {
+
+                        var inAnyRange = false
+                        for (vis in visions) {
+                            if (distance(x,y,vis.position.x,vis.position.y) <= vis.visionRange + 1.0f) {
+                                inAnyRange = true
+                                break
+                            }
+                        }
+                        if (! inAnyRange) {
+                            continue
+                        }
 
                         val tile = tm.tiles[x, y]
 
@@ -202,44 +319,64 @@ object TacticalMapComponent : DisplayComponent() {
                             max(min(min(thisTerrStart, adjXTerrStart), adjYTerrStart), 0)
                         }
 
-                        for (z in startZ until tile.terrains.size + 2) {
+                        for (z in startZ .. tile.lastOccupiedLevel + 4) {
+                            val mapCoord = MapCoord(x,y,z)
+
                             MapCoord.project(x, y, z, p)
 
-                            tile.terrains.getOrNull(z)?.ifPresent { terrain ->
-                                renderQuad(p, Terrains[terrain]!!.images[0].toImage(), Vec2f(1.0f, 1.0f))
+                            val terrainOpt = tile.terrains.getOrNull(z)
+                            val animatedEntitesAtPosition = animContext.positionAnimatedEntitiesAt(mapCoord)
+                            val entities = tile.entities
+                            val isMousedOverTile = mousedOverTile == MapCoord(x,y,z+1) && selection.selectionStyle == SelectionStyle.Unlimited
 
-                                if (selection.previewPathTiles.contains(MapCoord(x, y, z + 1))) {
-                                    renderQuad(p, image("hfcom/display/ui/tile_selection_blue.png"), Vec2f(1.0f, 1.0f))
-                                }
-                            }
+                            if (terrainOpt != null || animatedEntitesAtPosition.isNotEmpty() || entities.isNotEmpty() || isMousedOverTile) {
+                                val visibilityColor = computeVisibilityColor(visions, mapCoord, tile)
 
-                            if (mousedOverTile == MapCoord(x,y,z) && selection.selectionStyle == SelectionStyle.Unlimited) {
-                                val tc = tb.getOrUpdate(image("hfcom/display/ui/tile_cursor.png"))
+                                terrainOpt?.ifPresent { terrain ->
+                                    renderQuad(p, Terrains[terrain]!!.images[0].toImage(), Vec2f(1.0f, 1.0f), visibilityColor)
 
-                                for (q in 0 until 4) {
-                                    vao.addV().apply {
-                                        vertex = p + CenteredUnitSquare3D[q]
-                                        texCoord = tc[q]
-                                        color = RGBA(255u, 255u, 255u, 255u)
+                                    if (selection.previewPathTiles.contains(MapCoord(x, y, z + 1))) {
+                                        renderQuad(p, image("hfcom/display/ui/tile_selection_blue.png"), Vec2f(1.0f, 1.0f))
                                     }
                                 }
-                                vao.addIQuad()
-                            }
 
-                            for ((e, c) in animContext.positionAnimatedEntitiesAt(MapCoord(x, y, z))) {
-                                renderEntity(e, animContext, c.project())
-                            }
+                                if (isMousedOverTile) {
+                                    val tc = tb.getOrUpdate(image("hfcom/display/ui/tile_cursor.png"))
 
-                            for (entity in tile.entities) {
-                                entity[Physical]?.let { pd ->
-                                    if (pd.position.z == z) {
-                                        pd.position.project(p)
-                                        if (!animContext.hasPositionAnimation(entity)) {
-                                            renderEntity(entity, animContext, p)
+                                    for (q in 0 until 4) {
+                                        vao.addV().apply {
+                                            vertex = p + CenteredUnitSquare3D[q]
+                                            texCoord = tc[q]
+                                            color = visibilityColor
+                                        }
+                                    }
+                                    vao.addIQuad()
+                                }
+
+                                for ((e, c) in animatedEntitesAtPosition) {
+                                    // we draw the animated entity at the non-rounded conversion of MapCoordf -> MapCoord, because we don't want it drawing under
+                                    // the tile in front of it, but we do the visibility based on rounding since visually that's still the tile it's actually
+                                    // "on". I.e. the coord we use in the anim map is for ordering, not visually apparent location
+                                    val roundedCoord = c.toMapCoord(round = true)
+                                    val animVisibilityColor = if (roundedCoord == mapCoord) { visibilityColor } else { computeVisibilityColor(visions, roundedCoord, tm.tiles[roundedCoord.xy]) }
+                                    renderEntity(tm, e, animContext, mapCoord, c.project(), animVisibilityColor)
+                                }
+
+                                for (entity in entities) {
+                                    entity[Physical]?.let { pd ->
+                                        if (pd.position.z == z) {
+                                            pd.position.project(p)
+                                            if (!animContext.hasPositionAnimation(entity)) {
+                                                renderEntity(tm, entity, animContext, mapCoord, p, visibilityColor)
+                                            }
                                         }
                                     }
                                 }
                             }
+                        }
+
+                        for (sprite in spritesByPosition.getOrDefault(MapCoord2D(x,y), listOf())) {
+                            renderAnimationSprite(sprite)
                         }
                     }
                 }
@@ -249,6 +386,39 @@ object TacticalMapComponent : DisplayComponent() {
                 return false
             }
         }
+    }
+
+    private fun GameWorld.computeVisibilityColor(
+        visions: List<CharacterVision>,
+        mapCoord: MapCoord,
+        tile: Tile
+    ): RGBA {
+
+        if (tile.terrains.getOrNull(mapCoord.z) != null && tile.terrains.getOrNull(mapCoord.z + 1) == null && tile.entities.any{ e -> e[Object] != null && e[Physical]!!.position.z == mapCoord.z + 1 }) {
+            mapCoord.z += 1
+        }
+
+        var visibility = 0.0f
+        for (vision in visions) {
+            if (vision.position.distanceTo(mapCoord) <= vision.visionRange) {
+                val vis = vision.visibility.shadowsAtWorldCoord(mapCoord.x, mapCoord.y, mapCoord.z)
+                val useMax = tile.opaque[mapCoord.z - (mapCoord.z - vision.position.z).sign]
+                var maxV = 0.0f
+                var avgV = 0.0f
+                for (i in 0 until 4) {
+                    val v = vis.getRaw(i)
+                    maxV = maxV.max(v)
+                    avgV += v
+                }
+                visibility = if (useMax) {
+                    visibility.max(maxV)
+                } else {
+                    visibility.max(avgV / 4.0f)
+                }
+            }
+        }
+
+        return RGBAf(visibility, visibility, visibility, 1.0f)
     }
 
     override fun draw(world: World) {
@@ -331,7 +501,7 @@ object TacticalMapComponent : DisplayComponent() {
                         }.orElse {
                             val pathfinder = pathfinder(this, selc)
                             val paths = tileCoords.mapNotNull { to ->
-                                val targets = if (entityTargets.isEmpty()) {
+                                val targets = if (entityTargets.isEmpty() || entityTargets.all { it.entity == selectedCharacter || it.entity[Object] != null }) {
                                     setOf(to)
                                 } else {
                                     to.adjacent2D().toSet()
@@ -380,6 +550,7 @@ object TacticalMapComponent : DisplayComponent() {
                     }
                 }
             }
+            limitedSet = limitedSet?.let { set -> set.filterTo(mutableSetOf()) { nextTarget.effect.isValidTarget(this, selc, it) } }
 
             limitedSet?.let { set ->
                 selection.selectionStyle = SelectionStyle.TargetSet(set)
@@ -387,6 +558,30 @@ object TacticalMapComponent : DisplayComponent() {
         }.orElse {
             // do nothing
         }
+
+        var invalidActionReason : String? = null
+        selection.selectionStyle.let { style ->
+            var noTargets = false
+            when (style) {
+                SelectionStyle.Unlimited ->
+                    enableCursor()
+                is SelectionStyle.TargetSet -> {
+                    disableCursor()
+                    if (style.possibleTargets.isEmpty()) {
+                        noTargets = true
+                    }
+                }
+            }
+            if (noTargets) {
+                invalidActionReason = "No Targets"
+            }
+        }
+
+        if ((activeAction(selc)?.ap ?: 0).toDouble() > (selc[CharacterData]?.ap ?: 0.0)) {
+            invalidActionReason = "Insufficient AP"
+        }
+        
+        invalidActionWidget().bind("invalidActionReason", invalidActionReason)
     }
 
     fun World.updatePreviewWidget() {
@@ -418,24 +613,6 @@ object TacticalMapComponent : DisplayComponent() {
                     val w = previewWidgets.getOrPut(target to eff.effect) { ws.createWidget(arch) }
                     retainedKeys.add(target to eff.effect)
 
-                    val pos = when (target) {
-                        is EffectTarget.Entity -> {
-                            val pd = target.entity[Physical] ?: return
-                            pd.position + MapCoord(0,0,2)
-                        }
-                        is EffectTarget.Path -> {
-                            val middleStep = target.path.steps.getOrNull(target.path.steps.size / 2)
-                            middleStep?.plus(MapCoord(0,0,2)) ?: MapCoord(0,0,0)
-                        }
-                        is EffectTarget.Tile -> {
-                            target.at
-                        }
-                    }
-
-                    val pixelPos = mapCoordToPixel(this, pos)
-                    w.x = WidgetPosition.Pixel(Vec2i(pixelPos.x.roundToInt(), pixelPos.y.roundToInt()), WidgetOrientation.BottomLeft)
-                    w.y = WidgetPosition.Pixel(Vec2i(pixelPos.x.roundToInt(), pixelPos.y.roundToInt()), WidgetOrientation.BottomLeft)
-
                     when (eff.effect) {
                         is Effect.AttackEffect -> attackSummary(selc, target, eff.effect.attack)
                         Effect.Move -> null
@@ -452,6 +629,31 @@ object TacticalMapComponent : DisplayComponent() {
         for (k in toRemove) {
             previewWidgets.remove(k)?.destroy()
         }
+
+        updatePreviewWidgetPositions()
+    }
+
+    fun World.updatePreviewWidgetPositions() {
+        for ((k,w) in previewWidgets) {
+            val (target, effect) = k
+            val pos = when (target) {
+                is EffectTarget.Entity -> {
+                    val pd = target.entity[Physical] ?: return
+                    pd.position + MapCoord(0, 0, 2)
+                }
+                is EffectTarget.Path -> {
+                    val middleStep = target.path.steps.getOrNull(target.path.steps.size / 2)
+                    middleStep?.plus(MapCoord(0, 0, 2)) ?: MapCoord(0, 0, 0)
+                }
+                is EffectTarget.Tile -> {
+                    target.at
+                }
+            }
+
+            val pixelPos = mapCoordToPixel(this, pos)
+            w.x = WidgetPosition.Pixel(Vec2i(pixelPos.x.roundToInt(), pixelPos.y.roundToInt()), WidgetOrientation.BottomLeft)
+            w.y = WidgetPosition.Pixel(Vec2i(pixelPos.x.roundToInt(), pixelPos.y.roundToInt()), WidgetOrientation.BottomLeft)
+        }
     }
 
     fun World.updateMousedOverTile(mc2d: MapCoord2D?) {
@@ -460,14 +662,15 @@ object TacticalMapComponent : DisplayComponent() {
             return
         }
 
+        mousedOverColumn = mc2d
+
         val tm = this[TacticalMap]!!
 
         var mc: MapCoord? = null
         if (mc2d != null) {
-            val size = selectedCharacter?.get(Physical)?.size ?: 1
-            for (z in tm.tiles[mc2d].occupiableZLevels(size)) {
-                mc = MapCoord(mc2d, z - 1)
-                break
+            val z = tm.tiles[mc2d].supportedZLevels().toList().minByOrNull { (it - mousedOverTargetHeight).abs() }
+            if (z != null) {
+                mc = MapCoord(mc2d, z)
             }
         }
 
@@ -503,7 +706,15 @@ object TacticalMapComponent : DisplayComponent() {
         val tile = map.tiles[position.x, position.y]
 
         tile.entities.find { it[CharacterData]?.faction == map.activeFaction }?.let {
-            selectedCharacter = it
+            selectCharacter(it)
+        }
+    }
+
+    fun World.selectCharacter(c : Entity?) {
+        if (selectedCharacter != c) {
+            selectedCharacter?.get(CharacterData)?.let { cd -> cd.activeActionIdentifier = null }
+            clearPreviewState(clearPathing = true, clearActionState = true)
+            selectedCharacter = c
         }
     }
 
@@ -541,6 +752,7 @@ object TacticalMapComponent : DisplayComponent() {
                 }
                 is TMMouseReleaseEvent -> {
                     if (selectedCharacter == null) {
+                        placeEntity(createObject(ObjectTypes[t("Objects.Wall")]!!), event.position)
                         selectCharacterAt(event.position)
                     } else {
                         choosePreviewedTarget()
@@ -559,12 +771,23 @@ object TacticalMapComponent : DisplayComponent() {
                         }
                         Key.Escape -> {
                             selectedCharacter?.get(CharacterData)?.ifPresent { cd ->
-                                cd.activeActionIdentifier = null
+                                if (cd.activeActionIdentifier == null) {
+                                    selectCharacter(null)
+                                } else {
+                                    cd.activeActionIdentifier = null
+                                }
                             }
                         }
                         Key.Enter -> choosePreviewedTarget()
+                        Key.Tab -> {
+                            val playerCharacters = entitiesWithData(CharacterData).asSequence().filter { it[CharacterData]!!.faction == t("Factions.Player") }.toList()
+                            if (playerCharacters.isNotEmpty()) {
+                                val index = playerCharacters.indexOf(selectedCharacter)
+                                selectCharacter(playerCharacters[(index + 1) % playerCharacters.size])
+                            }
+                        }
                         else -> {
-                            event.key.numeral?.let { i -> actionsWidget().selectIndex(i) }
+                            event.key.numeral?.let { i -> actionUI().selectIndex(i) }
 
                             if (event.key == Key.Left || event.key == Key.Right) {
                                 val delta = if (event.key == Key.Left) { -1 } else { 1 }

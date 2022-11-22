@@ -7,6 +7,7 @@ import arx.display.components.CameraID
 import arx.display.core.PixelCamera
 import arx.display.windowing.WindowingSystemComponent
 import arx.engine.*
+import arx.game.core.GameTimeComponent
 import hfcom.display.*
 import hfcom.game.*
 import io.github.config4k.toConfig
@@ -39,10 +40,14 @@ object MapGeneratorComponent : GameComponent() {
 
                     val entities = if (x == 2 && y == 2) {
                         listOf(createCharacter(t("CharacterClasses.Archer"), t("Factions.Player"), "Tobold"))
+                    } else if (x == 4 && y == 3) {
+                        listOf(createCharacter(t("CharacterClasses.Warden"), t("Factions.Player"), "Jolgan"))
                     } else if (x == 2 && y == 6) {
                         listOf(createCharacter(t("CharacterClasses.Cultist"), t("Factions.Enemy"), "Cultist"))
                     } else if (x == 3 && y == 8) {
                         listOf(createCharacter(t("CharacterClasses.Cultist"), t("Factions.Enemy"), "Cultist"))
+                    } else if (x == 5 && y == 5) {
+                        listOf(createObject(ObjectTypes[t("Objects.Wall")]!!))
                     } else {
                         emptyList()
                     }
@@ -58,9 +63,13 @@ object MapGeneratorComponent : GameComponent() {
 
                 startTurn(ent)
 
-                ent.printAllData()
-
                 println(possibleActions(ent))
+            }
+
+            for (ent in entities) {
+                if (ent[hfcom.game.CharacterData] != null || ent[Object] != null) {
+                    ent.printAllData()
+                }
             }
         }
     }
@@ -78,9 +87,12 @@ object MapGeneratorComponent : GameComponent() {
 
 fun main() {
     Application()
+        .apply {
+            clearColor = RGBAf(0.0f,0.0f,0.0f,1.0f)
+        }
         .run(
             Engine(
-                mutableListOf(MapGeneratorComponent),
+                mutableListOf(MapGeneratorComponent, GameTimeComponent, VisionComponent),
                 mutableListOf(AnimationComponent, CameraComponent, TacticalMapComponent, WindowingSystemComponent)
             )
         )

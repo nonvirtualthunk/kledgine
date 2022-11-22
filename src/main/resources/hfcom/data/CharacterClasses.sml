@@ -12,6 +12,7 @@ CharacterClasses {
         precision : 1
         maxHP : 2
         equipment : [Bow]
+        visionRange : 10
       }],
       // level 2
       [{
@@ -29,6 +30,40 @@ CharacterClasses {
     ]
   }
 
+  Warden {
+    image : ${imgDir}/warden.png
+
+    levels : [
+      // level 1
+      [{
+        name : "Warden"
+        strength : 1
+        maxHP : 4
+        defence : 1
+        encumbrance : 1
+        equipment : [Longsword, RoundShield, ChainArmor]
+        visionRange : 8
+      }],
+      // level 2
+      [{
+        name : "Bodyguard"
+        protection : 1
+        maxHP : 2
+        skills : [Bodyguard]
+      },{
+        name : "Avenger"
+        maxHP : 1
+        accuracy : 1
+
+        combatStats {
+          flags {
+            Revenge : 1
+          }
+        }
+      }]
+    ]
+  }
+
 
   Cultist {
     image : ${imgDir}/cultist_4.png
@@ -39,6 +74,7 @@ CharacterClasses {
         strength : -1
         maxHP : 1
         equipment : [Dagger]
+        visionRange : 8
       }]
     ]
   }

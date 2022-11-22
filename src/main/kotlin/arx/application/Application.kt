@@ -1,9 +1,6 @@
 package arx.application
 
-import arx.core.ConfigRegistration
-import arx.core.Resources
-import arx.core.Vec2f
-import arx.core.Vec2i
+import arx.core.*
 import arx.display.core.Key
 import arx.display.core.KeyModifiers
 import arx.display.core.MouseButton
@@ -24,6 +21,9 @@ class Application(val windowWidth : Int = 800, val windowHeight : Int = 800) {
     private var engine: Engine = Engine()
     private var activeModifiers: KeyModifiers = KeyModifiers(0)
     private var mousePosition: Vec2f = Vec2f(0.0f, 0.0f)
+
+    @Volatile
+    var clearColor : RGBA = RGBAf(0.5f,0.5f,0.5f,1.0f)
 
     init {
         System.setProperty("java.awt.headless", "true")
@@ -159,8 +159,9 @@ class Application(val windowWidth : Int = 800, val windowHeight : Int = 800) {
         // bindings available for use.
         GL.createCapabilities()
 
+        val cc = clearColor.toFloat()
         // Set the clear color
-        GL20.glClearColor(0.5f, 0.5f, 0.5f, 0.0f)
+        GL20.glClearColor(cc.r, cc.g, cc.b, cc.a)
         GL20.glEnable(GL20.GL_BLEND)
         GL20.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
 

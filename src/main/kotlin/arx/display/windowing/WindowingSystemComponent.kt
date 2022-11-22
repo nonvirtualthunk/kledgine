@@ -6,8 +6,6 @@ import arx.core.RGBA
 import arx.display.core.*
 import arx.engine.*
 import arx.engine.Event
-import dev.romainguy.kotlin.math.ortho
-import org.lwjgl.opengl.GL11
 
 class WindowingSystemVertex : VertexDefinition() {
     private val vertexOffset = offsetFor(WindowingSystemVertex::vertex)
@@ -79,8 +77,12 @@ object WindowingSystemComponent : DisplayComponent() {
 
     val shader = Resources.shader("arx/shaders/windowing")
 
+    init {
+        initializePriority = Priority.First
+        eventPriority = Priority.First
+    }
+
     override fun initialize(world: World) {
-        eventPriority = EventPriority.First
         val ws = world[WindowingSystem]
         ws.registerStandardComponents()
         ws.world.eventCallbacks = ws.world.eventCallbacks + { e -> world.fireEvent(e) }

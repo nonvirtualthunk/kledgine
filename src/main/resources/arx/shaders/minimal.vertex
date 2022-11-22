@@ -8,11 +8,11 @@ layout (location = 2) in vec2 TexCoord;
 out vec4 ColorV;
 out vec2 TexCoordV;
 
-uniform mat4 ProjectionMatrix;
+uniform mat4 Matrix;
 //uniform mat4 ModelViewMatrix;
 
 void main (){
-    gl_Position = ProjectionMatrix * vec4(Vertex, 1.0);
+    gl_Position = Matrix * vec4(Vertex, 1.0);
     ColorV = Color;
     TexCoordV = TexCoord;
 }

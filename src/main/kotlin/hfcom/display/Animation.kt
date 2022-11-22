@@ -1,15 +1,16 @@
 package hfcom.display
 
-import arx.core.Noto
-import arx.core.RGBA
-import arx.core.expectLet
+import arx.core.*
+import arx.display.core.ImageRef
 import arx.display.core.mix
 import arx.engine.*
+import arx.engine.Event
 import hfcom.game.*
 import org.lwjgl.glfw.GLFW
 import java.lang.Float.max
 import java.lang.Float.min
 import java.util.Collections.emptyIterator
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.*
 import kotlin.reflect.KClass
@@ -22,7 +23,8 @@ enum class AnimationKind {
     Damage,
     Color,
     Delay,
-    Death
+    Death,
+    AttackResult
 }
 
 sealed class Animation(val entity: Entity?) {
@@ -68,6 +70,13 @@ interface PositionAnimation {
 }
 
 
+data class AnimationSprite(val position : MapCoordf ,val image : ImageRef, val dimensions : Vec2f, val color : RGBA = White)
+
+interface SpriteAnimation {
+    fun sprites() : List<AnimationSprite>
+}
+
+
 data class CharacterMoveAnimation(val character: Entity, val from: MapCoord, val to: MapCoord) : Animation(character), PositionAnimation {
     override fun currentPosition(): MapCoordf {
         val delta = (to - from).toFloat()
@@ -103,6 +112,28 @@ data class DamageAnimation(val character: Entity, val fromHPLost: Int, val toHPL
     }
 }
 
+data class MissAnimation(val character: Entity, val position : MapCoord, val dodge: Boolean) : Animation(character), PositionAnimation, SpriteAnimation {
+    override val animationKind: AnimationKind = AnimationKind.CharacterMove
+
+    val left = ThreadLocalRandom.current().nextBoolean()
+    override fun currentPosition(): MapCoordf {
+        val mf = if (f < 0.5) { f } else { 1.0f - f }
+
+        val pos = position.toMapCoordf()
+
+        val delta = if (left) { MapCoordf(-0.4f, 0.0f, 0.0f) } else { MapCoordf(0.4f, 0.0f, 0.0f) }
+
+        return pos + delta * mf + MapCoordf(0.0f, 0.0f, sin(mf * 2.0f * 3.14159f) * 0.15f)
+    }
+
+    override fun sprites(): List<AnimationSprite> {
+        val missImg = Resources.image("display/ui/miss.png").toImage()
+        val dimensions = Vec2f(0.5f, 0.5f / missImg.aspectRatio)
+        val color = RGBAf(1.0f,1.0f,1.0f,cos(f * PI.toFloat() * 0.5f))
+        return listOf(AnimationSprite(position = position.toMapCoordf() + MapCoordf(0.0f,0.0f,1.75f + f), image = missImg, dimensions = dimensions, color = color))
+    }
+}
+
 data class TintAnimation(val character: Entity, val tintColor: RGBA) : Animation(character) {
     override val animationKind = AnimationKind.Color
 
@@ -112,7 +143,7 @@ data class TintAnimation(val character: Entity, val tintColor: RGBA) : Animation
     }
 }
 
-class DelayAnimation(dur: Float) : Animation(null) {
+data class DelayAnimation(val dur: Float) : Animation(null) {
     init {
         duration = dur
     }
@@ -184,6 +215,20 @@ data class AnimationContext(
 
     fun positionAnimatedEntitiesAt(c: MapCoord2D): List<Pair<Entity, MapCoordf>> {
         return animatedEntitiesByPosition2D[c] ?: emptyList()
+    }
+
+    fun animatedPositionFor(e : Entity): MapCoordf? {
+        return entityAnimatedPositions[e]
+    }
+
+    fun animations(): Iterator<Animation> {
+        return iterator {
+            for (m in animationsByEntityAndKind.values) {
+                for ((_,v) in m) {
+                    yield(v)
+                }
+            }
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -370,6 +415,9 @@ object AnimationComponent : DisplayComponent() {
                 )
                 is CharacterDied -> AD.createAnimationGroup(
                     CharacterDeathAnimation(event.character, (+event.character[Physical]).position).withDuration(0.5f)
+                )
+                is AttackMiss -> AD.createAnimationGroup(
+                    MissAnimation(event.target, position = event.target[Physical]!!.position,dodge = true).withDuration(0.75f)
                 )
             }
         }

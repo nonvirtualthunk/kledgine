@@ -1,5 +1,6 @@
 package arx.display.core
 
+import arx.core.Noto
 import arx.core.Vec2f
 import arx.core.Vec3f
 import arx.core.Vec4f
@@ -41,7 +42,13 @@ class Shader(val path: String) {
     }
 
     fun uniformLocation(name: String): Int =
-        uniformLocations.getOrPut(name) { GL20.glGetUniformLocation(program, name) }
+        uniformLocations.getOrPut(name) {
+            val loc = GL20.glGetUniformLocation(program, name)
+            if (loc == -1) {
+                Noto.err("Invalid uniform provided : $name")
+            }
+            loc
+        }
 
     fun setUniform(name: String, value: Vec2f) {
         GL20.glUniform2fv(uniformLocation(name), floatArrayOf(value.x, value.y))

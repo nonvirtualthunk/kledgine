@@ -1,9 +1,7 @@
 package hfcom.display
 
-import arx.core.RGBA
-import arx.core.Resources
-import arx.core.expectLet
-import arx.core.ifPresent
+import arx.core.*
+import arx.core.Noto.info
 import arx.display.core.Image
 import arx.display.windowing.WindowingSystem
 import arx.display.windowing.components.ListItemSelected
@@ -64,6 +62,7 @@ class TacticalActionsWidget(val world : World) {
         val index : Int,
         val backgroundColor : RGBA,
         val edgeColor : RGBA,
+        val iconColor : RGBA,
     )
 
     fun update() {
@@ -82,7 +81,8 @@ class TacticalActionsWidget(val world : World) {
                 }
             }
 
-            val activeIdent = selc[CharacterData]!!.activeActionIdentifier ?: moveIdent
+            val CD = selc[CharacterData]!!
+            val activeIdent = CD.activeActionIdentifier ?: moveIdent
 
             actionOptions = sortedPossibles.withIndex().map {
                 val (index, v) = it
@@ -102,6 +102,11 @@ class TacticalActionsWidget(val world : World) {
                     } else {
                         RGBA(20,20,25,255)
                     },
+                    iconColor = if (act.ap <= CD.ap.toInt() && (act != MoveAction || CD.ap > 0)) {
+                        White
+                    } else {
+                        RGBA(75,75,75,255)
+                    }
                 )
             }
 
@@ -113,9 +118,9 @@ class TacticalActionsWidget(val world : World) {
         with(world) {
             TacticalMapComponent.selectedCharacter?.ifPresent { selc ->
                 selc[CharacterData]?.ifPresent { cd ->
-                    TacticalMapComponent.actionsWidget().actionOptions.firstOrNull { opt -> opt.index == index }?.ifPresent { opt ->
+                    TacticalMapComponent.actionUI().actionOptions.firstOrNull { opt -> opt.index == index }?.ifPresent { opt ->
                         cd.activeActionIdentifier = opt.identifier
-                        println("Selected action: ${cd.activeActionIdentifier}")
+                        info("Selected action: ${cd.activeActionIdentifier}")
                     }
                 }
             }

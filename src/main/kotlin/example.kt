@@ -168,7 +168,7 @@ class HelloWorld {
         val td2 = texBlock.getOrUpdate(textLayout.quads[0].image)
 
         val orthoMatrix = ortho(0.0f, 1000.0f, 0.0f, 1000.0f, 0.0f, 100.0f)
-        shader.setUniform("ProjectionMatrix", orthoMatrix)
+        shader.setUniform("Matrix", orthoMatrix)
 
 
         val dv = arrayOf(Vec2f(0.0f,1.0f), Vec2f(1.0f,1.0f), Vec2f(1.0f,0.0f), Vec2f(0.0f,0.0f))

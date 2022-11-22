@@ -33,6 +33,18 @@ data class Taxon(val namespace : String, val name: String, val parents : List<Ta
     override fun toString(): String {
         return "†$name"
     }
+
+    fun isA(t : Taxon) : Boolean {
+        if (t == this) {
+            return true
+        }
+        for (p in parents) {
+            if (p.isA(t)) {
+                return true
+            }
+        }
+        return false
+    }
 }
 
 data class ProtoTaxon(val namespace : String, val name: String, val parentIdentifiers : List<String> = emptyList())

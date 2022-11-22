@@ -172,7 +172,7 @@ object BackgroundComponent : WindowingComponent {
             }
         }
         if (w.showing.update(ctx)) {
-            w.markForFullUpdate()
+            w.markForFullUpdateAndAllDescendants()
         }
     }
 }

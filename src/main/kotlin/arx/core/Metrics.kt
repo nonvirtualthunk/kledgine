@@ -29,6 +29,14 @@ object Metrics {
         return registry.timer(name)
     }
 
+    fun counter(name: String) : Counter {
+        return registry.counter(name)
+    }
+
+    fun meter(name: String) : Meter {
+        return registry.meter(name)
+    }
+
     fun print(nameFilter : String? = null) {
         val reporter: ConsoleReporter = ConsoleReporter.forRegistry(registry)
             .convertRatesTo(TimeUnit.SECONDS)

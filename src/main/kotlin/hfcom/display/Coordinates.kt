@@ -136,6 +136,14 @@ class MapCoordf(x : Float, y : Float, z : Float) : Vec3f(x,y,z) {
         }
     }
 
+    override operator fun times(scalar: Float): MapCoordf {
+        return MapCoordf(elem0 * scalar, elem1 * scalar, elem2 * scalar)
+    }
+
+    operator fun plus(other: MapCoordf): MapCoordf {
+        return MapCoordf(other.x + x, other.y + y, other.z + z)
+    }
+
     override fun toString(): String {
         return "MapCoordf($x, $y, $z)"
     }

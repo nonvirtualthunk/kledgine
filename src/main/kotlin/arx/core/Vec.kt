@@ -236,7 +236,7 @@ open class Vec3f(var elem0: Float = 0.toFloat(), var elem1: Float = 0.toFloat(),
         }
 
 
-    operator fun plus(other: Vec3f): Vec3f {
+    open operator fun plus(other: Vec3f): Vec3f {
         return Vec3f(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2)
     }
 
@@ -246,7 +246,7 @@ open class Vec3f(var elem0: Float = 0.toFloat(), var elem1: Float = 0.toFloat(),
         elem2 = (elem2 + other.elem2)
     }
 
-    operator fun plus(scalar: Float): Vec3f {
+    open operator fun plus(scalar: Float): Vec3f {
         return Vec3f(elem0 + scalar, elem1 + scalar, elem2 + scalar)
     }
 
@@ -288,7 +288,7 @@ open class Vec3f(var elem0: Float = 0.toFloat(), var elem1: Float = 0.toFloat(),
         elem2 = (elem2 * other.elem2)
     }
 
-    operator fun times(scalar: Float): Vec3f {
+    open operator fun times(scalar: Float): Vec3f {
         return Vec3f(elem0 * scalar, elem1 * scalar, elem2 * scalar)
     }
 
@@ -473,7 +473,7 @@ class Vec4f(var elem0: Float = 0.toFloat(), var elem1: Float = 0.toFloat(), var 
         }
 
 
-    operator fun plus(other: Vec4f): Vec4f {
+    open operator fun plus(other: Vec4f): Vec4f {
         return Vec4f(elem0 + other.elem0, elem1 + other.elem1, elem2 + other.elem2, elem3 + other.elem3)
     }
 

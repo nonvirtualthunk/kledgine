@@ -1,12 +1,26 @@
 package hfcom.game
 
 import arx.core.*
-import arx.engine.Entity
-import arx.engine.GameWorld
-import arx.engine.prettyString
+import arx.engine.*
 import hfcom.display.MapCoord
 import hfcom.display.MapCoord2D
 import kotlin.math.max
+
+
+data class CharacterEntity(val world : GameWorld, override val entity : Entity) : EntityWrapper {
+    val character : CharacterData by lazy {
+        world.data(entity, CharacterData)!!
+    }
+
+    val physical : Physical by lazy {
+        world.data(entity, Physical)!!
+    }
+
+    val identity : Identity by lazy {
+        world.data(entity, Identity)!!
+    }
+}
+
 
 
 fun GameWorld.createCharacter(cclass: Taxon, faction: Taxon, name: String?): Entity {
@@ -27,6 +41,14 @@ fun GameWorld.createCharacter(cclass: Taxon, faction: Taxon, name: String?): Ent
 }
 
 
+fun GameWorld.createObject(objType : ObjectType) : Entity {
+    val c = createEntity()
+    c.attachData(objType.physicalData.copy())
+    c.attachData(objType.objectData.copy())
+    c.attachData(Identity(identity = objType.identity))
+    return c
+}
+
 fun GameWorld.placeEntity(ent: Entity, at: MapCoord2D) {
     val tm = global(TacticalMap) ?: return
     tm.entities.add(ent)
@@ -35,10 +57,10 @@ fun GameWorld.placeEntity(ent: Entity, at: MapCoord2D) {
 
     val tile = tm.tiles[at]
     val z = tile.occupiableZLevels(pd.size).next()
-    tile.entities = tile.entities + ent
     pd.position = MapCoord(at, z)
+    tile.addEntity(this, ent)
 
-    fireEvent(CharacterPlaced(ent, pd.position))
+    fireEvent(EntityPlaced(ent, pd.position))
 }
 
 fun GameWorld.moveCost(map: TacticalMap, cd: CharacterData, from: MapCoord, to: MapCoord): Double {
@@ -84,10 +106,10 @@ fun GameWorld.moveCharacter(ent: Entity, path: Pathfinder.Path<MapCoord>) : Bool
         }
 
         val tile = tm.tiles[pd.position.x, pd.position.y]
-        tile.entities = tile.entities - ent
+        tile.removeEntity(this, ent)
 
         val newTile = tm.tiles[step.x, step.y]
-        newTile.entities = newTile.entities + ent
+        newTile.addEntity(this, ent)
         val oldPos = pd.position
         pd.position = MapCoord(step.x, step.y, step.z)
 
@@ -250,4 +272,13 @@ fun GameWorld.distanceBetween(a: Entity, b: Entity) : Float? {
     val apd = a[Physical] ?: return null
     val bpd = b[Physical] ?: return null
     return apd.position.distanceTo(bpd.position)
+}
+
+fun GameWorld.playerCharacters() : Iterator<CharacterEntity> {
+    val player = t("Factions.Player")
+    return entitiesWithData(CharacterData).filter {
+        it[CharacterData]!!.faction == player
+    }.map {
+        CharacterEntity(this, it)
+    }
 }

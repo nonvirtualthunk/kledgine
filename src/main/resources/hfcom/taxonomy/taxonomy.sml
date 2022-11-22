@@ -10,6 +10,7 @@ TaxonomySources : [
     [data/Items.sml, Items],
     [data/Skills.sml, Skills],
     [data/Flags.sml, Flags],
-    [data/Triggers.sml, Triggers]
-    [data/Factions.sml, Factions]
+    [data/Triggers.sml, Triggers],
+    [data/Factions.sml, Factions],
+    [data/Objects.sml, Objects]
 ]

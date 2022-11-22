@@ -25,6 +25,7 @@ data class CombatStats(
     val encumbrance: Int = 0,              // weight, difficulty to use, adds to fatigue
     val protection: Int = 0,               // physical damage reduction
     val maxHP: Int = 0,                    // maximum hp a character can have
+    val visionRange: Int = 0,              // how far the entity can see
     val flags: Map<Taxon, Int> = mapOf(),  // general purpose flags
 ) {
     constructor(cv: ConfigValue?) : this(
@@ -36,6 +37,7 @@ data class CombatStats(
         encumbrance = cv["encumbrance"].asInt() ?: 0,
         protection = cv["protection"].asInt() ?: 0,
         maxHP = cv["maxHP"].asInt() ?: 0,
+        visionRange = cv["visionRange"].asInt() ?: 0,
         flags = cv["flags"].map { k, v ->
             if (v.isBool()) {
                 t(k) to if (v.asBool() == true) {
@@ -62,6 +64,7 @@ data class CombatStats(
             encumbrance + other.encumbrance,
             protection + other.protection,
             maxHP + other.maxHP,
+            visionRange + other.visionRange,
             mergeFlags(flags, other.flags)
         )
     }
@@ -125,7 +128,12 @@ object Flags : SimpleLibrary<Flag>("Flags", listOf("hfcom/data/Flags.sml"), { Fl
 data class FlagData(
     var flags: Map<Taxon, Int> = mapOf()
 ) : GameData, FromConfig {
-    companion object : DataType<FlagData>(FlagData())
+    companion object : DataType<FlagData>(FlagData()), FromConfigCreator<FlagData> {
+        override fun createFromConfig(cv: ConfigValue?): FlagData? {
+            if (cv == null) { return null }
+            return FlagData().apply { readFromConfig(cv) }
+        }
+    }
 
     override fun dataType(): DataType<*> {
         return FlagData
@@ -255,7 +263,7 @@ sealed interface Effect {
         override fun isValidTarget(world: GameWorld, actor: Entity, target: EffectTarget): Boolean {
             with(world) {
                 when (target) {
-                    is EffectTarget.Entity -> return isEnemy(actor, target.entity)
+                    is EffectTarget.Entity -> return isEnemy(actor, target.entity) && attackSummary(actor, target, attack) != null
                     else -> return false
                 }
             }
@@ -491,6 +499,7 @@ operator fun Item?.unaryPlus(): Item {
 data class ItemType(
     val itemData: Item,
     val weaponData: Weapon?,
+    val flagData : FlagData,
     override var identity: Taxon
 ) : Identifiable {
     companion object : FromConfigCreator<ItemType> {
@@ -501,7 +510,8 @@ data class ItemType(
             return ItemType(
                 itemData = Item().apply { readFromConfig(cv) },
                 weaponData = cv["attacks"]?.let { Weapon(cv) },
-                identity = UnknownThing
+                flagData = FlagData(cv) ?: FlagData(),
+                identity = UnknownThing,
             )
         }
     }
@@ -511,11 +521,70 @@ fun GameWorld.createItem(itemType: ItemType, implicitItem: Boolean = false): Ent
     val ent = createEntity()
     ent.attachData(itemType.itemData.copy(implicitItem = implicitItem))
     ent.attachData(Identity(identity = itemType.identity))
+    ent.attachData(itemType.flagData)
     itemType.weaponData?.let { ent.attachData(it.copy()) }
     return ent
 }
 
 object ItemTypes : SimpleLibrary<ItemType>("Items", listOf("hfcom/data/Items.sml"), { ItemType.createFromConfig(it) })
+
+
+
+data class Object (
+    val passable : Boolean = false,
+    val opaque : Boolean = true,
+    val providesSupport : Boolean = true,       // i.e. can you stand on it
+    val display : ObjectDisplay = ObjectDisplay.Default
+) : GameData {
+    companion object : DataType<Object>( Object() ), FromConfigCreator<Object> {
+        override fun createFromConfig(cv: ConfigValue?): Object? {
+            if (cv == null) { return null }
+            return Object(
+                passable = cv["passable"].asBool() ?: false,
+                display = ObjectDisplay(cv["display"]) ?: ObjectDisplay.Default
+            )
+        }
+    }
+    override fun dataType() : DataType<*> { return Object }
+}
+
+
+sealed interface ObjectDisplay {
+    data class Simple(val image : ImageRef, val color : RGBA = White) : ObjectDisplay
+    data class Wall(val pillar : ImageRef, val swToNe : ImageRef, val seToNw : ImageRef, val color : RGBA = White) : ObjectDisplay
+
+
+    companion object : FromConfigCreator<ObjectDisplay> {
+        val Default = Simple(ImageRef("hfcom/display/objects/book_1.png"))
+        override fun createFromConfig(cv: ConfigValue?): ObjectDisplay? {
+            return if (cv.isStr()) {
+                Simple(image = ImageRef.createFromConfig(cv), color = White)
+            } else if (cv.isObject() && cv["pillar"] != null) {
+                Wall(pillar = ImageRef.createFromConfig(cv["pillar"]), seToNw = ImageRef.createFromConfig(cv["seToNw"]), swToNe = ImageRef.createFromConfig(cv["swToNe"]), color = White)
+            } else {
+                null
+            }
+        }
+    }
+}
+
+data class ObjectType (
+    val objectData : Object,
+    val physicalData : Physical,
+) : Identifiable {
+    override var identity: Taxon = UnknownThing
+    companion object : FromConfigCreator<ObjectType> {
+        override fun createFromConfig(cv: ConfigValue?): ObjectType? {
+            if (cv == null) { return null }
+            return ObjectType(
+                objectData = Object(cv) ?: Object(),
+                physicalData = Physical(cv) ?: Physical()
+            )
+        }
+    }
+}
+
+object ObjectTypes : SimpleLibrary<ObjectType>("Objects", listOf("hfcom/data/Objects.sml"), { ObjectType(it) })
 
 
 data class Attack(
@@ -657,7 +726,15 @@ data class Physical(
     var position: MapCoord = MapCoord(0, 0, 0),
     var size: Int = 2
 ) : GameData {
-    companion object : DataType<Physical>(Physical())
+    companion object : DataType<Physical>(Physical()), FromConfigCreator<Physical> {
+        override fun createFromConfig(cv: ConfigValue?): Physical? {
+            if (cv == null) { return null }
+            return Physical(
+                position = MapCoord(0, 0, 0),
+                size = cv["size"].asInt() ?: 2
+            )
+        }
+    }
 
     override fun dataType(): DataType<*> {
         return Physical
@@ -687,10 +764,119 @@ data class TerrainType(
 object Terrains : SimpleLibrary<TerrainType>("Terrains", listOf("hfcom/data/Terrains.sml"), { TerrainType.createFromConfig(it) })
 
 
-data class Tile(
-    var terrains: List<Taxon?> = emptyList(),
-    var entities: List<Entity> = emptyList()
-) {
+class Tile(terr : List<Taxon?> = emptyList()) {
+
+    var terrains: List<Taxon?> = terr
+        set(v) {
+            field = v
+            recalculateBitsets()
+        }
+
+    var entities: Set<Entity> = emptySet()
+        private set
+
+    private var occupiedByEntities = BitVec32()
+    private var supportByEntities = BitVec32()
+    private var opaqueByEntities = BitVec32()
+
+    var occupied: BitVec32 = BitVec32()
+        private set
+    var support: BitVec32 = BitVec32()
+        private set
+    var opaque: BitVec32 = BitVec32()
+        private set
+    var firstUnoccupiedLevel: Byte = 0
+        private set
+    var lastOccupiedLevel: Byte = 0
+        private set
+    var firstSupportLevel: Byte = 0
+        private set
+    var lastSupportLevel: Byte = 0
+        private set
+
+    init {
+        recalculateBitsets()
+    }
+
+    fun addEntity(world : GameWorld, e : Entity) {
+        if (! entities.contains(e)) {
+            entities = entities + e
+            recalculateEntityBitsets(world)
+        }
+    }
+
+    fun removeEntity(world : GameWorld, e : Entity) {
+        entities = entities - e
+        recalculateEntityBitsets(world)
+    }
+
+    private fun recalculateEntityBitsets(world: GameWorld) {
+        occupiedByEntities = BitVec32()
+        supportByEntities = BitVec32()
+        opaqueByEntities = BitVec32()
+        with(world) {
+            for (ent in this@Tile.entities) {
+                val pd = ent[Physical] ?: continue
+                val od = ent[Object]
+
+                val isOpaque = od?.opaque ?: false
+                val isSolid = !(od?.passable ?: false)
+                val isSupport = od?.providesSupport ?: false
+
+                for (j in 0 until pd.size) {
+                    if (isSolid) {
+                        occupiedByEntities = occupiedByEntities.setBit(pd.position.z + j)
+                    }
+                    if (isOpaque) {
+                        opaqueByEntities = opaqueByEntities.setBit(pd.position.z + j)
+                    }
+                    if (isSupport) {
+                        supportByEntities = supportByEntities.setBit(pd.position.z + j)
+                    }
+                }
+            }
+        }
+        recalculateBitsets()
+    }
+
+    private fun recalculateBitsets() {
+        var occ = occupiedByEntities
+        var opa = opaqueByEntities
+        var sup = supportByEntities
+
+        for (i in 0 until terrains.size) {
+            if (terrains[i] != null) {
+                occ = occ.setBit(i)
+                opa = opa.setBit(i)
+                sup = sup.setBit(i)
+            }
+        }
+
+        occupied = occ
+        opaque = opa
+        support = sup
+
+        firstUnoccupiedLevel = 32
+        firstSupportLevel = 32
+        lastSupportLevel = -1
+        for (i in 0 until 31) {
+            val o = occupied[i]
+            val s = support[i]
+            if (! o && firstUnoccupiedLevel == 32.toByte()) {
+                firstUnoccupiedLevel = i.toByte()
+            }
+            if (o) {
+                lastOccupiedLevel = i.toByte()
+            }
+            if (s && firstSupportLevel == 32.toByte()) {
+                firstSupportLevel = i.toByte()
+            }
+            if (s) {
+                lastSupportLevel = i.toByte()
+            }
+        }
+    }
+
     /**
      * Iterates through the z levels on this tile that could be occupied
      * by a character of the given height. That is, all z levels that have
@@ -700,7 +886,41 @@ data class Tile(
      */
     fun occupiableZLevels(height: Int): Iterator<Int> {
         return iterator {
-            yield(terrains.size)
+            var i = firstUnoccupiedLevel - 1
+            while (i <= lastOccupiedLevel) {
+                if (support[i]) {
+                    var ok = true
+                    for (j in 1 .. height) {
+                        if (occupied[i + j]) {
+                            ok = false
+                            break
+                        }
+                    }
+                    if (ok) {
+                        yield(i+1)
+                        i += height - 1
+                    }
+                }
+                i += 1
+            }
+        }
+    }
+
+    /**
+     * Iterates through the z levels on this tile that are supported. Effectively
+     * that indicates the places that something could be placed, whether or not
+     * something else has already been placed there. More exactly, this is all
+     * z where [z - 1] is a support but [z] is not
+     */
+    fun supportedZLevels(): Iterator<Int> {
+        return iterator {
+            var i = firstSupportLevel.toInt()
+            while (i <= lastSupportLevel.toInt()) {
+                if (support[i] && ! support[i + 1]) {
+                    yield(i+1)
+                }
+                i += 1
+            }
         }
     }
 }

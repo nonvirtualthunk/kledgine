@@ -232,6 +232,23 @@ class EventQueryBuilder(type: String) {
 
 object Noto {
 
+    val threadColors = arrayOf(
+        "\u001B[38;5;231m",
+        "\u001B[38;5;102m",
+        "\u001B[38;5;105m",
+        "\u001B[38;5;108m",
+        "\u001B[38;5;117m",
+        "\u001B[38;5;145m",
+        "\u001B[38;5;77m",
+        "\u001B[38;5;31m",
+        "\u001B[38;5;194m",
+        "\u001B[38;5;223m",
+        "\u001B[38;5;101m",
+        "\u001B[38;5;148m"
+    )
+    const val warnColor = "\u001B[38;5;184m"
+    const val errColor = "\u001B[38;5;196m"
+
     val keyIds = Object2IntOpenHashMap<String>().apply {
         defaultReturnValue(-1)
     }
@@ -282,19 +299,27 @@ object Noto {
         err("$message\n\t$attributes")
     }
 
+    fun setColor(color : String) {
+        print(color)
+    }
+
     fun info(str: String) {
+        setColor(threadColors[(Thread.currentThread().id % threadColors.size.toLong()).toInt()])
         println(str)
     }
 
     fun warn(str: String) {
+        setColor(warnColor)
         println("[warn] $str")
     }
 
     fun err(str: String) {
+        setColor(errColor)
         println("[error] $str")
     }
 
     fun <T> errAndReturn(str: String, t : T) : T {
+        setColor(errColor)
         println("[error] $str")
         return t
     }

@@ -168,6 +168,9 @@ object ImageDisplayWindowingComponent : WindowingComponent {
                     w.markForUpdate(RecalculationFlag.DimensionsY)
                 }
             }
+            if (iw.color.update(ctx)) {
+                w.markForUpdate(RecalculationFlag.Contents)
+            }
         }
     }
 }

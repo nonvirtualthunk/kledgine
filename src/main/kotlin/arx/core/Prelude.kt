@@ -8,6 +8,7 @@ import java.util.concurrent.ThreadLocalRandom
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.math.sqrt
 
 
 enum class Axis {
@@ -47,6 +48,10 @@ enum class Axis2D(val vecf : Vec2f, val vec : Vec2i) {
             X -> Axis.X
             Y -> Axis.Y
         }
+    }
+
+    companion object {
+        val axes = arrayOf(Axis2D.X, Axis2D.Y)
     }
 }
 
@@ -132,6 +137,11 @@ fun Int.clamp(a : Int, b: Int) : Int {
     return max(min(this, b), a)
 }
 
+fun Float.clamp(a : Float, b: Float) : Float {
+    return kotlin.math.max(kotlin.math.min(this, b), a)
+}
+
+
 fun UInt.clamp(a : UInt, b: UInt) : UInt {
     if (this < a) {
         return a
@@ -162,6 +172,14 @@ inline fun Float.min(o: Float) : Float {
     return java.lang.Float.min(this, o)
 }
 
+inline fun Float.abs() : Float {
+    return kotlin.math.abs(this)
+}
+
+inline fun Int.abs() : Int {
+    return kotlin.math.abs(this)
+}
+
 fun Double.clamp(a : Double, b: Double) : Double {
     return kotlin.math.max(kotlin.math.min(this, b), a)
 }
@@ -181,6 +199,85 @@ fun maxu(a : UByte, b : UByte) : UByte {
 fun minu(a : UByte, b : UByte) : UByte {
     return if (a < b) { a } else { b }
 }
+
+
+inline fun <T, R : Comparable<R>> List<T>.minIndexBy(l : List<T>, fn : (T) -> R) : Int? {
+    if (l.isEmpty()) {
+        return null
+    }
+
+    var lowestValue : R = fn(l[0])
+    var lowestIndex = 0
+    for (i in 1 until l.size) {
+        val v = fn(l[i])
+        if (v < lowestValue) {
+            lowestValue = v
+            lowestIndex = i
+        }
+    }
+    return lowestIndex
+}
+
+fun FloatArray.minIndex() : Int {
+    val a = this
+    if (a.isEmpty()) {
+        return -1
+    }
+    var lowestValue = a[0]
+    var lowestIndex = 0
+    for (i in 1 until a.size) {
+        val f = a[i]
+        if (f < lowestValue) {
+            lowestValue = f
+            lowestIndex = i
+        }
+    }
+    return lowestIndex
+}
+
+fun FloatArray.maxIndex() : Int {
+    val a = this
+    if (a.isEmpty()) {
+        return -1
+    }
+    var highestValue = a[0]
+    var highestIndex = 0
+    for (i in 1 until a.size) {
+        val f = a[i]
+        if (f > highestValue) {
+            highestValue = f
+            highestIndex = i
+        }
+    }
+    return highestIndex
+}
+
+fun sqrtf(f : Float) : Float {
+    return sqrt(f)
+}
+
+fun distance(x1:Float, y1:Float, x2: Float, y2: Float) : Float {
+    val dx = x1 - x2
+    val dy = y1 - y2
+    return sqrtf(dx*dx + dy*dy)
+}
+
+fun distance(x1:Int, y1:Int, x2: Int, y2: Int) : Float {
+    val dx = x1 - x2
+    val dy = y1 - y2
+    return sqrtf((dx*dx + dy*dy).toFloat())
+}
+
+fun <T> Iterator<T>.filter(fn : (T) -> Boolean) : Iterator<T> {
+    return iterator {
+        for (v in this@filter) {
+            if (fn(v)) {
+                yield(v)
+            }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalContracts::class)
 @Suppress("UNCHECKED_CAST")

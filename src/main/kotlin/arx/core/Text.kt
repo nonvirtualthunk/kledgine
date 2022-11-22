@@ -61,7 +61,11 @@ class GlyphRenderer {
 class ArxTypeface(val baseFont: Font) {
     val renderer = GlyphRenderer()
     val fontsBySize = mutableMapOf<Int, ArxFont>()
-    var baseSize = 9
+    var baseSize = when(baseFont.family) {
+        "ChevyRay - Express" -> 9
+        "ChevyRay - Skullboy" -> 16
+        else -> throw java.lang.IllegalStateException("Need to actually implement good handling of base sizes for fonts")
+    }
 
     fun withSize(size: Int) : ArxFont {
         val effSize = ceil(size.toFloat() / baseSize.toFloat()).toInt() * baseSize

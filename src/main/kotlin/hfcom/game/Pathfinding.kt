@@ -17,39 +17,39 @@ private val dys = arrayOf(0, 0, -1, 1)
 fun pathfinder(world: GameWorld, character: Entity) : Pathfinder<MapCoord> {
     val tm = world[TacticalMap]!!
     val cd = +world.data(character, CharacterData)
+    val pd = +world.data(character, Physical)
 
     return Pathfinder(
         { c, out ->
-            with(world) {
-                val charFaction = cd.faction
+//            with(world) {
+//                val charFaction = cd.faction
+                val charSize = pd.size
                 for (q in 0 until 4) {
                     val ax = c.x + dxs[q]
                     val ay = c.y + dys[q]
                     if (ax >= 0 && ay >= 0 && ax < tm.tiles.dimensions.x && ay < tm.tiles.dimensions.y) {
                         val tile = tm.tiles[ax, ay]
-                        for (z in tile.occupiableZLevels(2)) {
+                        for (z in tile.occupiableZLevels(charSize)) {
                             if (c.z - z <= 3 && z - c.z <= 2) {
-                                var rejectedForEntity = false
-                                for (ent in tile.entities) {
-                                    if (ent[CharacterData]?.faction != charFaction) {
-                                        rejectedForEntity = true
-                                    }
-                                }
-
-                                if (!rejectedForEntity) {
-                                    out.add(MapCoord(ax, ay, z))
-                                }
+                                out.add(MapCoord(ax, ay, z))
                             }
                         }
                     }
                 }
-            }
+//            }
         },
         { from, to ->
             world.moveCost(tm, cd, from, to)
         },
         { from, target ->
-            (abs(from.x - target.x) * 1.001 + abs(from.y - target.y) + abs(from.z - target.z)).toDouble()
+            val ax = abs(from.x - target.x)
+            val ay = abs(from.y - target.y)
+            val raw = (ax + ay + abs(from.z - target.z)).toDouble()
+            if (ax > ay) {
+                raw + ax * 0.001
+            } else {
+                raw + ay * 0.001
+            }
         }
     )
 }

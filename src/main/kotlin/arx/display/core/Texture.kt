@@ -1,9 +1,6 @@
 package arx.display.core
 
-import arx.core.Recti
-import arx.core.Vec2f
-import arx.core.Vec2i
-import arx.core.swapAndPop
+import arx.core.*
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL21.*
 import kotlin.math.max
@@ -24,14 +21,37 @@ data class AtlasData(
     val t3: Vec2f = Vec2i(location.x, location.y + dimensions.y).toFloat() / fullDimensions.toFloat()
 
 
-    fun texCoord(q: Int) : Vec2f =
-        when(q) {
+    fun texCoord(q: Int) : Vec2f {
+        return when (q) {
             0 -> t0
             1 -> t1
             2 -> t2
             3 -> t3
             else -> error("Tex coords can only be indexed in [0,4)")
         }
+    }
+
+    fun subRectTexCoord(subRect : Rectf, q: Int, out : Vec2f) {
+        when (q) {
+            0 -> {
+                out.x = t0.x + subRect.x * texDimensions.x
+                out.y = t0.y + subRect.y * texDimensions.y
+            }
+            1 -> {
+                out.x = t0.x + subRect.x * texDimensions.x + subRect.width * texDimensions.x
+                out.y = t0.y + subRect.y * texDimensions.y
+            }
+            2 -> {
+                out.x = t0.x + subRect.x * texDimensions.x + subRect.width * texDimensions.x
+                out.y = t0.y + subRect.y * texDimensions.y + subRect.height * texDimensions.y
+            }
+            3 -> {
+                out.x = t0.x + subRect.x * texDimensions.x
+                out.y = t0.y + subRect.y * texDimensions.y + subRect.height * texDimensions.y
+            }
+            else -> error("Tex coords can only be indexed in [0,4)")
+        }
+    }
 
     operator fun get(q: Int) : Vec2f =
         when(q) {

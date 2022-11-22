@@ -77,6 +77,7 @@ ActionIcon {
       width: 32
       height: 32
       background.draw: false
+      color: "%(action.iconColor)"
 
       image: "%(action.icon)"
     }
@@ -90,6 +91,26 @@ ActionIcon {
       background.draw: false
 
       text : "%(action.index)"
+    }
+  }
+}
+
+
+InvalidActionWidget {
+  x : centered
+  y : 20
+  width: WrapContent
+  height: WrapContent
+  padding : [8,8,0]
+  showing : "%(?invalidActionReason)"
+
+  children {
+    Text {
+      text : "%(invalidActionReason)"
+      background.draw : false
+      fontSize: 32
+      font: "fonts/ChevyRaySkullboy.ttf"
+      color: [75,0,0,255]
     }
   }
 }

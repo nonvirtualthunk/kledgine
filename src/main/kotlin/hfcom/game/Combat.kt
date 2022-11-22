@@ -35,7 +35,7 @@ fun GameWorld.attackSummary(attacker : Entity, defender : Entity, attack : Attac
         attStats.accuracy + attack.accuracy
     }
 
-    val defence = defStats.defence
+    val defence = defStats.defence + 5
 
     val netAccuracy = accuracy - defence
 
@@ -103,7 +103,7 @@ fun GameWorld.takeDamage(ent : Entity, damage : Int) {
         val pd = ent[Physical] ?: return Noto.errAndReturn("target of attack died, but was not a physical entity ${prettyString(ent)}", Unit)
         val tm = global(TacticalMap) ?: return Noto.errAndReturn("somehow there's no tactical map ${prettyString(ent)}", Unit)
         val tile = tm.tiles[pd.position.xy]
-        tile.entities = tile.entities - ent
+        tile.removeEntity(this, ent)
         fireEvent(CharacterDied(ent))
     }
 }
