@@ -9,11 +9,24 @@ ChildA {
 
   children {
     Nested {
+      type: ImageDisplay
       x : 15
       y : 25
       width : intrinsic
       height : intrinsic
       image : "display/images/small_tree.png"
+    }
+
+    Dropdown {
+      type : Dropdown
+      x : 5 right of Nested
+      y : 25
+
+      width : intrinsic
+      height : intrinsic
+
+      dropdownItems : "%(dropdownState.items)"
+      selectedItem : %(dropdownState.selection)
     }
   }
 }

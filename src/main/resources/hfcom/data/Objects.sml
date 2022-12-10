@@ -13,4 +13,10 @@ Objects {
     }
     size : 2
   }
+
+  OakTree {
+    display : "display/objects/oak_tree.png"
+
+    size : 3
+  }
 }

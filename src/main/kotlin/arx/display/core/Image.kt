@@ -268,6 +268,7 @@ open class Image internal constructor() : ImageRef {
                         img.data = buff
                         img.dimensions = Vec2i(width.get(0), height.get(0))
                         img.ymult = img.dimensions.x * 4
+                        img.path = path
 
                         img
                     }

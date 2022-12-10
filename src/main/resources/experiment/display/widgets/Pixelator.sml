@@ -1,8 +1,26 @@
 
+SaveWidget {
+  type: FileInput
+  width : intrinsic
+  height : intrinsic
+
+  x: centered
+  y: 0 from bottom
+
+  padding : [4,4,0]
+
+  text : "Save"
+  fontSize : 20
+  horizontalTextAlignment : Centered
+
+  fileInputKind : Save
+
+  fileFilters : "png"
+}
 
 PipelineStageWidget {
 
-  width : 150
+  width : WrapContent
   height : WrapContent
   padding : [1,1,0]
 
@@ -64,6 +82,8 @@ ArtifactWidget {
 ParamWidget {
   type: Div
 
+  width: WrapContent
+  height: WrapContent
 
   background.draw: false
 
@@ -74,6 +94,7 @@ ParamWidget {
       width: Intrinsic
       height: Intrinsic
 
+      showing : "%(param.isTextInput)"
       text: "%(param.name): "
       background.draw: false
     }
@@ -86,8 +107,56 @@ ParamWidget {
 //      width: Intrinsic
 //      height: Intrinsic
 
+      showing : "%(param.isTextInput)"
       text: "%(param.value)"
       twoWayBinding : true
+    }
+
+    fileLabel {
+      x: Centered
+
+      width: Intrinsic
+      height: Intrinsic
+
+      showing : "%(param.isFileInput)"
+      text: "%(param.name)"
+      background.draw: false
+    }
+
+    fileSelection {
+      type: FileInput
+      y: 0 below fileLabel
+
+      width: Intrinsic
+      height: Intrinsic
+
+      padding : [2,2,0]
+      showing : "%(param.isFileInput)"
+
+      filePath: "%(param.value)"
+      twoWayBinding : true
+    }
+
+    choiceLabel {
+      y: Centered
+
+      width: Intrinsic
+      height: Intrinsic
+
+      showing : "%(param.isChoiceInput)"
+      text: "%(param.name): "
+      background.draw: false
+    }
+
+    choiceValue {
+      type: Dropdown
+      x: 5 right of label
+      padding : [2,2,0]
+
+      showing : "%(param.isChoiceInput)"
+      dropdownItems : "%(param.choices)"
+      selectedItem: "%(param.value)"
+      itemTextFunction: "%(param.itemToText)"
     }
   }
 }

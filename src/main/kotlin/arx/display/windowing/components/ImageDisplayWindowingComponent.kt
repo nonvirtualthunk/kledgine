@@ -136,13 +136,17 @@ object ImageDisplayWindowingComponent : WindowingComponent {
     }
 
     override fun render(ws: WindowingSystem, w: Widget, bounds: Recti, quadsOut: MutableList<WQuad>) {
-        w[ImageWidget]?.let { iw ->    // 100 x 100
-            iw.image()?.let { img ->   // 75 x 50  1.3, 2
+        w[ImageWidget]?.let { iw ->
+            iw.image()?.let { img ->
                 val proportions = Vec2f(w.resClientWidth.toFloat() / img.width, w.resClientHeight.toFloat() / img.height)
                 val dims = if (proportions.x < proportions.y) {
                     Vec2i(w.resClientWidth, ceil(img.height * proportions.x).toInt())
                 } else {
                     Vec2i(ceil(img.width * proportions.y).toInt(), w.resClientHeight)
+                }
+
+                if (img.destroyed) {
+                    Noto.err("Attempting to render destroyed image")
                 }
 
                 quadsOut.add(WQuad(

@@ -68,9 +68,10 @@ fun ConfigValue?.asFloat(): Float? {
 }
 
 fun ConfigValue?.asStr(): String? {
-    return when (val v = this?.unwrapped()) {
-        null -> null
-        else -> v.toString()
+    return if (this != null && ! this.isObject() && ! this.isList()) {
+        this.unwrapped().toString()
+    } else {
+        null
     }
 }
 

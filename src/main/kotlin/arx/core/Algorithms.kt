@@ -156,6 +156,9 @@ internal data class MedianCutHSLGroup(val colorCounts : Map<HSL, Float>) {
 }
 
 fun medianCutPalette(params : MedianCutParams) : List<RGBA> {
+    if (params.colorCounts.size <= params.k) {
+        return params.colorCounts.keys.toList()
+    }
     var groups = listOf(MedianCutGroup(params.colorCounts))
     while (groups.size < params.k) {
         val highestRangeGroup = groups.maxBy { it.maxRange }
@@ -201,19 +204,15 @@ internal fun medianCut(group: MedianCutGroup) : Pair<MedianCutGroup, MedianCutGr
     val highestRangeChannel = RGBAChannel.values().maxBy { if (max[it] > min[it]) { max[it] - min[it] } else { 0u } }
 
     val sortedColors = group.colorCounts.toList().sortedBy { it.first[highestRangeChannel] }
-    var medianRemaining = sum / 2.0f
+    if (sortedColors.size == 1) {
+        return MedianCutGroup(mapOf(sortedColors[0])) to MedianCutGroup(mapOf())
+    }
 
     val low = mutableMapOf<RGBA, Float>()
     val high = mutableMapOf<RGBA, Float>()
 
-    for ((k,v) in sortedColors) {
-        if (medianRemaining > 0.0f) {
-            low[k] = v
-        } else {
-            high[k] = v
-        }
-        medianRemaining -= v
-    }
+    low.putAll(sortedColors.subList(0, sortedColors.size / 2))
+    high.putAll(sortedColors.subList(sortedColors.size / 2, sortedColors.size))
 
     return MedianCutGroup(low) to MedianCutGroup(high)
 }

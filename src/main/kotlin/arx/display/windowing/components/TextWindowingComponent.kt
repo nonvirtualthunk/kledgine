@@ -77,7 +77,7 @@ sealed interface EditorOperation {
     data class Replace(val previousText: String, val newText: String, val position : Int) : EditorOperation
 }
 
-data class TextDataChanged(override val widgets: MutableList<Widget>, val operation : EditorOperation, val src: DisplayEvent) : WidgetEvent(src)
+data class TextDataChanged(val operation : EditorOperation, val src: DisplayEvent) : WidgetEvent(src)
 
 data class TextInput(
     var textData: StringBuilder = StringBuilder(),
@@ -146,25 +146,34 @@ object TextWindowingComponent : WindowingComponent {
         )
     }
 
-    override fun intrinsicSize(w: Widget, axis: Axis2D, minSize: Vec2i, maxSize: Vec2i): Int? {
-        val td = w[TextDisplay] ?: return null
 
-        val region = Recti(0, 0, maxSize.x, maxSize.y)
-
-        val params = params(td, region, HorizontalTextAlignment.Left)
-        val layout = if (td.text().isEmpty()) {
+    fun intrinsicSizeFor(params : TextLayout.Params, axis : Axis2D) : Int {
+        val layout = if (params.text.isEmpty()) {
             layoutCache.getOrPut(params.copy(text = RichText("|")))
         } else {
             layoutCache.getOrPut(params)
         }
 
-        return layout.max[axis] - layout.min[axis]
+        val raw = layout.max[axis] - layout.min[axis]
+        return when(axis) {
+            Axis2D.X -> raw + 1
+            Axis2D.Y -> raw
+        }
+    }
+
+    override fun intrinsicSize(w: Widget, axis: Axis2D, minSize: Vec2i, maxSize: Vec2i): Int? {
+        val td = w[TextDisplay] ?: return null
+
+        val region = Recti(0, 1, maxSize.x, maxSize.y)
+
+        val params = params(td, region, HorizontalTextAlignment.Left)
+        return intrinsicSizeFor(params, axis)
     }
 
     override fun render(ws: WindowingSystem, w: Widget, bounds: Recti, quadsOut: MutableList<WQuad>) {
         val td = w[TextDisplay] ?: return
 
-        val region = Recti(w.resClientX, w.resClientY, w.resClientWidth + 2, w.resClientHeight + 1)
+        val region = Recti(w.resClientX, w.resClientY + 1, w.resClientWidth + 2, w.resClientHeight + 1)
         val layout = layoutCache.getOrPut(params(td, region, td.horizontalAlignment))
 
         for (squad in layout.quads) {
@@ -245,7 +254,9 @@ object TextWindowingComponent : WindowingComponent {
                                             }
                                         }
                                         else -> {
-                                            Noto.warn("unsupported type for two way binding on text input : ${setter.parameters[1].type}")
+                                            if (w.showing()) {
+                                                Noto.warn("unsupported type for two way binding on text input : ${setter.parameters[1].type}")
+                                            }
                                         }
                                     }
 
@@ -279,7 +290,7 @@ object TextWindowingComponent : WindowingComponent {
     }
 
     fun textDataChanged(w : Widget, ti: TextInput, td: TextDisplay, op : EditorOperation, src : DisplayEvent) {
-        w.windowingSystem.fireEvent(TextDataChanged(mutableListOf(w), op, src))
+        w.windowingSystem.fireEvent(TextDataChanged(op, src).withWidget(w))
         ti.undoStack.add(op)
         syncDisplayToData(w, ti, td)
 

@@ -481,6 +481,8 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         cv["showing"]?.let { showing = bindableBool(it) }
 
         cv["padding"].asVec3i()?.let { padding = it }
+
+        cv["ignoreBounds"]?.asBool()?.let { ignoreBounds = it }
     }
 
     /**
@@ -497,6 +499,7 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
         overlay = w.overlay?.copy()
         showing = w.showing.copyBindable()
         padding = w.padding
+        ignoreBounds = w.ignoreBounds
     }
 
 
@@ -532,12 +535,23 @@ class Widget(val windowingSystem: WindowingSystem, var parent: Widget?) : Widget
     // |                            Drawing                                         |
     // +============================================================================+
 
-    var background = NineWayImage(bindable(ImagePath("arx/ui/minimalistBorder.png")))
+    var background = NineWayImage(bindable(ImagePath("arx/ui/defaultBorder.png")))
     var overlay: NineWayImage? = null
 
 
     val quads = mutableListOf<WQuad>()
     var bounds = Recti(0, 0, 0, 0)
+    var ignoreBounds = false
+        set(v) {
+            if (field != v) {
+                field = v
+                if (v) {
+                    windowingSystem.ignoreBoundsWidgets.add(this)
+                } else {
+                    windowingSystem.ignoreBoundsWidgets.remove(this)
+                }
+            }
+        }
 
     // +============================================================================+
     // |                            Access                                          |

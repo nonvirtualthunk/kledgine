@@ -3,11 +3,15 @@ package experiment.pixelator
 import arx.core.*
 import arx.display.core.Image
 import arx.display.core.SentinelImage
+import experiment.pixelator.Pixelator.colorDistance
 import experiment.pixelator.Pixelator.forKernels
 import java.io.File
 import java.lang.IllegalArgumentException
 import java.lang.Math.max
 import java.lang.Math.pow
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import java.util.concurrent.Executors
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.*
 
@@ -89,9 +93,19 @@ interface PipelineStage {
     interface Parameter {
         val name : String
         fun setFromString(str: String)
+        fun valueAsString() : String
+
+        fun isTextInput() : Boolean { return true }
+        fun isFileInput(): Boolean { return false }
+        fun isChoiceInput(): Boolean { return allChoices().isNotEmpty() }
+        fun allChoices() : List<String> { return emptyList() }
         data class StringParam(override val name : String, var value : String) : Parameter {
             override fun setFromString(str: String) {
                 value = str
+            }
+
+            override fun valueAsString(): String {
+                return value
             }
         }
 
@@ -99,17 +113,60 @@ interface PipelineStage {
             override fun setFromString(str: String) {
                 str.toFloatOrNull()?.let { value = it }
             }
+            override fun valueAsString(): String {
+                return value.toString()
+            }
         }
 
         data class BooleanParam(override val name : String, var value : Boolean) : Parameter {
             override fun setFromString(str: String) {
                 str.toBooleanStrictOrNull()?.let { value = it }
             }
+            override fun valueAsString(): String {
+                return value.toString()
+            }
         }
 
         data class IntParam(override val name : String, var value : Int) : Parameter {
             override fun setFromString(str: String) {
                 str.toIntOrNull()?.let { value = it }
+            }
+            override fun valueAsString(): String {
+                return value.toString()
+            }
+        }
+
+        data class FileParam(override val name : String, var value : File) : Parameter {
+            override fun setFromString(str: String) {
+                value = File(str)
+            }
+
+            override fun valueAsString(): String {
+                return value.path
+            }
+
+            override fun isFileInput(): Boolean { return true }
+            override fun isTextInput() : Boolean { return false }
+        }
+
+        data class ChoiceParam<T>(override val name : String, var value : T, val possibleValues : List<T>, val toStringFn : (T) -> String = { it.toString() }) : Parameter {
+            val itemToText : (T) -> RichText = { t ->
+                RichText(toStringFn(t))
+            }
+            override fun setFromString(str: String) {
+                for (v in possibleValues) {
+                    if (str == toStringFn(v)) {
+                        value = v
+                    }
+                }
+            }
+
+            override fun valueAsString(): String {
+                return toStringFn(value)
+            }
+
+            override fun allChoices(): List<String> {
+                return possibleValues.map { it.toString() }.toList()
             }
         }
     }
@@ -158,6 +215,8 @@ class Pipeline {
 
     val artifacts : MutableMap<SlotIdentifier, Artifact> = mutableMapOf()
 
+    val staleArtifacts : MutableList<Artifact> = mutableListOf()
+
     var parameterStates = mutableMapOf<Pair<PipelineStage, String>, String>()
 
     fun addStage(stage: PipelineStage) {
@@ -201,7 +260,9 @@ class Pipeline {
         needsUpdate.add(targetStage)
     }
 
-    fun update() {
+    @Synchronized
+    fun update() : Boolean {
+        var ret = false
         for (stage in stages) {
             for (param in stage.parameters) {
                 if (parameterStates[stage to param.name] != param.toString()) {
@@ -212,6 +273,7 @@ class Pipeline {
             }
         }
 
+        ret = needsUpdate.isNotEmpty()
         val allUpdates = mutableSetOf<PipelineStage>()
         needsUpdate.forEach { recursiveDependents(it, allUpdates) }
         needsUpdate.clear()
@@ -243,25 +305,84 @@ class Pipeline {
                     }
                     for ((k, v) in results) {
                         val existing = artifacts[SlotIdentifier(stage, k)]
-                        existing?.image?.destroy()
+                        existing?.let { staleArtifacts.add(it) }
                         artifacts[SlotIdentifier(stage, k)] = v
                     }
                 }
             }
         }
+        return ret
+    }
+
+    @Synchronized
+    fun cleanUp() {
+        for (existing in staleArtifacts) {
+            existing.image.destroy()
+        }
+        staleArtifacts.clear()
     }
 }
 
 
+enum class TargetDimension {
+    Width,
+    Height,
+    Largest
+}
+
 class SourceImage : PipelineStage {
     val imageKey = ArtifactKey("image", ArtifactType.Image)
-    val pathParam = PipelineStage.Parameter.StringParam(name = "path", value = "")
+    val pathParam = PipelineStage.Parameter.FileParam(name = "path", value = File("/tmp"))
 
-    override var parameters : Set<PipelineStage.Parameter> = setOf(pathParam)
+    val targetSizeParam = PipelineStage.Parameter.IntParam("target size", 1024)
+
+    override var parameters : Set<PipelineStage.Parameter> = setOf(pathParam, targetSizeParam)
     override val inputs: Set<Input> = setOf()
     override val outputs: Set<ArtifactKey> = setOf(imageKey)
     override fun process(inputs: Map<ArtifactKey, Artifact>) : Map<ArtifactKey, Artifact> {
-        return mapOf(imageKey to Artifact.Image(image = Image.load(pathParam.value)))
+        val img = Image.load(pathParam.value.absolutePath)
+
+        val targetSize = if (img.width > img.height) {
+            Vec2i(((img.width.toFloat() / img.height.toFloat()) * targetSizeParam.value).toInt(), targetSizeParam.value)
+        } else {
+            Vec2i(targetSizeParam.value, ((img.height.toFloat() / img.width.toFloat()) * targetSizeParam.value).toInt())
+        }
+
+        val outDX = 1.0f / targetSize.x - 0.00001f
+        val outDY = 1.0f / targetSize.y - 0.00001f
+
+        fun sample(xf : Float, yf : Float, v : RGBA) {
+            img.pixel((xf * img.width).toInt(), (yf * img.height).toInt(), v)
+        }
+
+
+        val a = RGBA()
+        val b = RGBA()
+        val c = RGBA()
+        val d = RGBA()
+
+        val outImg = if (targetSize.x <= img.width && targetSize.y <= img.height) {
+            img
+        } else {
+            Image.ofSize(targetSize.x, targetSize.y).withPixels { x, y, v ->
+                val xf = x.toFloat() / targetSize.x.toFloat()
+                val yf = y.toFloat() / targetSize.y.toFloat()
+
+                sample(xf, yf, a)
+                sample(xf + outDX, yf, b)
+                sample(xf, yf + outDY, c)
+                sample(xf + outDX, yf + outDY, d)
+
+                val newR = ((a.r + b.r + c.r + d.r) / 4u).clamp(0u, 255u).toUByte()
+                val newG = ((a.g + b.g + c.g + d.g) / 4u).clamp(0u, 255u).toUByte()
+                val newB = ((a.b + b.b + c.b + d.b) / 4u).clamp(0u, 255u).toUByte()
+                val newA = ((a.a + b.a + c.a + d.a) / 4u).clamp(0u, 255u).toUByte()
+
+                v(newR, newG, newB, newA)
+            }
+        }
+
+        return mapOf(imageKey to Artifact.Image(image = outImg))
     }
 }
 
@@ -270,18 +391,29 @@ class LinearDownscale : PipelineStage {
     val imageOutKey = ArtifactKey("scaled image", ArtifactType.Image)
 
     val targetSizeParam = PipelineStage.Parameter.IntParam("target size", 512)
+    val targetSizeDimParam = PipelineStage.Parameter.ChoiceParam("target dimension", TargetDimension.Largest, TargetDimension.values().toList())
 
     override val inputs: Set<Input> = setOf(Input(imageInKey))
     override val outputs: Set<ArtifactKey> = setOf(imageOutKey)
-    override var parameters: Set<PipelineStage.Parameter> = setOf()
+    override var parameters: Set<PipelineStage.Parameter> = setOf(targetSizeParam, targetSizeDimParam)
 
     override fun process(inputs: Map<ArtifactKey, Artifact>): Map<ArtifactKey, Artifact> {
         val img = inputs.image(imageInKey) ?: return mapOf()
 
-        val targetSize = if (img.width > img.height) {
-            Vec2i(((img.width.toFloat() / img.height.toFloat()) * targetSizeParam.value).toInt(), targetSizeParam.value)
-        } else {
-            Vec2i(targetSizeParam.value, ((img.height.toFloat() / img.width.toFloat()) * targetSizeParam.value).toInt())
+        val targetSize = when(targetSizeDimParam.value) {
+            TargetDimension.Width -> {
+                Vec2i(targetSizeParam.value, ((img.height.toFloat() / img.width.toFloat()) * targetSizeParam.value).toInt())
+            }
+            TargetDimension.Height -> {
+                Vec2i(((img.width.toFloat() / img.height.toFloat()) * targetSizeParam.value).toInt(), targetSizeParam.value)
+            }
+            TargetDimension.Largest -> {
+                if (img.width > img.height) {
+                    Vec2i(((img.width.toFloat() / img.height.toFloat()) * targetSizeParam.value).toInt(), targetSizeParam.value)
+                } else {
+                    Vec2i(targetSizeParam.value, ((img.height.toFloat() / img.width.toFloat()) * targetSizeParam.value).toInt())
+                }
+            }
         }
 
         val outDX = 1.0f / targetSize.x - 0.00001f
@@ -317,6 +449,54 @@ class LinearDownscale : PipelineStage {
     }
 }
 
+class AdjustImageSaturation : PipelineStage {
+    val imageInKey = ArtifactKey("input image", ArtifactType.Image)
+    val imageOutKey = ArtifactKey("output image", ArtifactType.Image)
+
+    val saturationAdjustmentParam = PipelineStage.Parameter.FloatParam("saturation", 1.0f)
+
+    override val inputs: Set<Input> = setOf(Input(imageInKey))
+    override val outputs: Set<ArtifactKey> = setOf(imageOutKey)
+    override var parameters: Set<PipelineStage.Parameter> = setOf(saturationAdjustmentParam)
+
+    override fun process(inputs: Map<ArtifactKey, Artifact>): Map<ArtifactKey, Artifact> {
+        val img = inputs.image(imageInKey) ?: return mapOf()
+
+        val sat = saturationAdjustmentParam.value
+
+        val outImg = Image.copy(img).transformPixels { _, _, v ->
+            val hsl = v.toHSL()
+            hsl.s = (hsl.s * sat).clamp(0.0f, 1.0f)
+            v(hsl.toRGBA())
+        }
+        return mapOf(imageOutKey to Artifact.Image(outImg))
+    }
+}
+
+class AdjustPaletteSaturation : PipelineStage {
+    val paletteInKey = ArtifactKey("input palette", ArtifactType.Palette)
+    val paletteOutKey = ArtifactKey("output palette", ArtifactType.Palette)
+
+    val saturationAdjustmentParam = PipelineStage.Parameter.FloatParam("saturation", 1.0f)
+
+    override val inputs: Set<Input> = setOf(Input(paletteInKey))
+    override val outputs: Set<ArtifactKey> = setOf(paletteOutKey)
+    override var parameters: Set<PipelineStage.Parameter> = setOf(saturationAdjustmentParam)
+
+    override fun process(inputs: Map<ArtifactKey, Artifact>): Map<ArtifactKey, Artifact> {
+        val palette = inputs.palette(paletteInKey) ?: return mapOf()
+
+        val sat = saturationAdjustmentParam.value
+
+        val outPalette = palette.map { v ->
+            val hsl = v.toHSL()
+            hsl.s = (hsl.s * sat).clamp(0.0f, 1.0f)
+            hsl.toRGBA()
+        }
+        return mapOf(paletteOutKey to Artifact.Palette(outPalette))
+    }
+}
+
 class ReducePalette : PipelineStage {
     val imageKey = ArtifactKey(ArtifactType.Image)
     val paletteKey = ArtifactKey(ArtifactType.Palette)
@@ -341,8 +521,10 @@ class ReducePalette : PipelineStage {
             return RGBA(((v.r / 2u) * 2u + 1u).toUByte(), ((v.g / 2u) * 2u + 1u).toUByte(), ((v.b / 2u + 1u) * 2u).toUByte(), ((v.a / 2u) * 2u + 1u).toUByte())
         }
         srcImg.forEachPixel { x, y, v ->
-            val weight = weightings[x, y]
-            colorCounts.compute(downsampleRGBA(v)) { _, a -> (a ?: 0.0f) + weight }
+            if (v.a >= 250u) {
+                val weight = weightings[x, y]
+                colorCounts.compute(downsampleRGBA(v)) { _, a -> (a ?: 0.0f) + weight }
+            }
         }
 
         if (! medianCutParam.value) {
@@ -379,6 +561,65 @@ class ReducePalette : PipelineStage {
             val palette = medianCutPalette(MedianCutParams(colorCounts = colorCounts, k = paletteSizeParam.value))
             return mapOf(paletteKey to Artifact.Palette(colors = palette))
         }
+    }
+}
+
+class RemoveBackground : PipelineStage {
+    val imageInKey = ArtifactKey(ArtifactType.Image)
+    val imageOutKey = ArtifactKey(ArtifactType.Image)
+
+    val toleranceParm = PipelineStage.Parameter.IntParam(name = "tolerance", value = 32)
+
+    override val inputs: Set<Input> = setOf(Input(imageInKey))
+    override val outputs: Set<ArtifactKey> = setOf(imageOutKey)
+    override var parameters: Set<PipelineStage.Parameter> = setOf(toleranceParm)
+
+    override fun process(inputs: Map<ArtifactKey, Artifact>): Map<ArtifactKey, Artifact> {
+        val srcImg = inputs.image(imageInKey) ?: return mapOf()
+
+        val outImg = Image.copy(srcImg)
+
+        val cornerColors = mutableListOf<RGBA>()
+        for (xf in listOf(0.0f to 0.1f, 0.9f to 1.0f)) {
+            for (yf in listOf(0.0f to 0.1f, 0.9f to 1.0f)) {
+                var avg = Vec4f()
+                var sum = 0.0f
+                for (x in (xf.first * outImg.width).toInt() until (xf.second * outImg.width).toInt()) {
+                    for (y in (yf.first * outImg.height).toInt() until (yf.second * outImg.height).toInt()) {
+                        avg = avg + outImg[x,y].toFloat()
+                        sum += 1.0f
+                    }
+                }
+                avg = avg / sum
+                cornerColors.add(RGBAf(avg))
+            }
+        }
+
+        val cornerColorCounts = mutableMapOf<RGBA, Int>()
+        for (color in cornerColors) {
+            var found = false
+            for (existingColor in cornerColorCounts.keys) {
+                if (colorDistance(existingColor, color) < toleranceParm.value) {
+                    cornerColorCounts[existingColor] = cornerColorCounts[existingColor]!! + 1
+                    found = true
+                    break
+                }
+            }
+            if (! found) {
+                cornerColorCounts[color] = 1
+            }
+        }
+
+        val highest = cornerColorCounts.maxBy { it.value }
+        if (highest.value >= 2) {
+            outImg.transformPixels { _, _, v ->
+                if (colorDistance(v, highest.key) <= toleranceParm.value) {
+                    v(255,255,255,0)
+                }
+            }
+        }
+
+        return mapOf(imageOutKey to Artifact.Image(outImg))
     }
 }
 
@@ -419,28 +660,37 @@ class ReduceImage : PipelineStage {
                 error[i] = diffusedError[x,y][i] * ditherAmount
             }
 
+            var opaqueCount = 0
+
             for (dx in 0 until kernel.size) {
                 for (dy in 0 until kernel.size) {
                     val c = kernel[dx,dy]
-                    for (i in 0 until paletteSize) {
-                        val e = Pixelator.colorDistance2(c, palette[i]).toDouble()
-                        error[i] = error[i] + e
+                    if (c.a >= 250u) {
+                        for (i in 0 until paletteSize) {
+                            val e = Pixelator.colorDistance2(c, palette[i]).toDouble()
+                            error[i] = error[i] + e
+                        }
+                        opaqueCount += 1
                     }
                 }
             }
 
-            val minIndex = error.withIndex().minBy { v -> v.value }.index
-            val minError = error[minIndex]
-            for (i in error.indices) {
-                if (i == minIndex) {
-                    for (dv in Pixelator.atkinsonDV) {
-                        diffusedError[x + dv.x, y + dv.y][i] += minError * (1.0 / 7.0)
+            if (opaqueCount == 0) {
+                result[x, y] = RGBA(255,255,255,0)
+            } else {
+                val minIndex = error.withIndex().minBy { v -> v.value }.index
+                val minError = error[minIndex]
+                for (i in error.indices) {
+                    if (i == minIndex) {
+                        for (dv in Pixelator.atkinsonDV) {
+                            diffusedError[x + dv.x, y + dv.y][i] += minError * (1.0 / 7.0)
+                        }
+
                     }
-
                 }
-            }
 
-            result[x,y] = palette[minIndex]
+                result[x, y] = palette[minIndex]
+            }
         }
         return mapOf(imageOutKey to Artifact.Image(result))
     }
@@ -471,7 +721,9 @@ fun main(args : Array<String>) {
         targetSize = parsed.flagValue("s", "size")?.toIntOrNull() ?: 64,
         dither = parsed.hasFlag("d", "dither"),
         ditherWeight = parsed.flagValue("d", "dither")?.toFloatOrNull() ?: 1.0f,
-        image = SentinelImage
+        outputPath = parsed.flagValue("o", "out"),
+        image = SentinelImage,
+        removeBackground = parsed.hasFlag("b", "removeBackground")
     )
 
     val prefix = if (parsed.unnamedArgs.isEmpty()) { "/Users/sbock/Downloads/ai/" } else { "" }
@@ -497,6 +749,7 @@ fun main(args : Array<String>) {
                 stageImage.writeToFile("$path${i}_$stageName.png")
             }
             finalImage.writeToFile("${path}${stages.size}_final.png")
+            params.outputPath?.let {out -> finalImage.writeToFile(out)}
         }
     }
 }
@@ -509,7 +762,9 @@ object Pixelator {
         var paletteSize : Int,
         var targetSize : Int,
         var dither : Boolean,
-        var ditherWeight : Float
+        var ditherWeight : Float,
+        var outputPath : String?,
+        var removeBackground : Boolean = false
     )
 
     data class Result(
@@ -596,6 +851,8 @@ object Pixelator {
                 image
             }
             stages += "Source" to srcImg.map { _,_,v -> v }
+
+            // TODO: implement background removal
 
             srcImg.transformPixels { x,y,v -> gammaCorrect(v) }
             printTime("Gamma correction")

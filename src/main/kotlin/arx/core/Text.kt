@@ -13,7 +13,10 @@ import java.awt.image.BufferedImage
 import java.io.File
 import java.lang.Integer.max
 import java.lang.Integer.min
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.text.AttributedString
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.ceil
 
@@ -93,21 +96,35 @@ class ArxFont(val font: Font, val size: Int, val typeface: ArxTypeface) {
 
 sealed interface RichTextSegment {
     fun isEmpty(): Boolean
+
+    fun plainText() : String
 }
 
 data class SimpleTextSegment (val text: String) : RichTextSegment {
     override fun isEmpty(): Boolean {
         return text.isEmpty()
     }
+
+    override fun plainText(): String {
+        return text
+    }
 }
 data class StyledTextSegment (val text: String, val color: RGBA? = null, val font: ArxFont? = null) : RichTextSegment {
     override fun isEmpty(): Boolean {
         return text.isEmpty()
     }
+
+    override fun plainText(): String {
+        return text
+    }
 }
 data class ImageSegment (val image: Image, val color: RGBA? = null, val size: Int? = null) : RichTextSegment {
     override fun isEmpty(): Boolean {
         return false
+    }
+
+    override fun plainText(): String {
+        return ""
     }
 }
 
@@ -128,6 +145,10 @@ data class RichText(
 
     fun isEmpty() : Boolean {
         return segments.isEmpty() || segments.all { it.isEmpty() }
+    }
+
+    fun plainText() : String {
+        return segments.joinToString { it.plainText() }
     }
 }
 

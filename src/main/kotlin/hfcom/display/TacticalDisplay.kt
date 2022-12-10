@@ -189,9 +189,9 @@ object TacticalMapComponent : DisplayComponent() {
                     val img = od.display.image.toImage()
 //                    val wf = img.width / 32.0f
 //                    val hf = img.height / 32.0f
-                    val wf = 1.0f
-                    val hf = 1.0f
-                    renderQuad(p, img, Vec2f(wf, hf), od.display.color * visibilityColor)
+                    val wf = 1.5f
+                    val hf = 1.5f
+                    renderQuad(p + Vec3f(0.0f,0.4f,0.0f), img, Vec2f(wf, hf), od.display.color * visibilityColor)
                 }
                 is ObjectDisplay.Wall -> {
                     val neighborWalls = BooleanArray(4) { false }
@@ -580,7 +580,7 @@ object TacticalMapComponent : DisplayComponent() {
         if ((activeAction(selc)?.ap ?: 0).toDouble() > (selc[CharacterData]?.ap ?: 0.0)) {
             invalidActionReason = "Insufficient AP"
         }
-        
+
         invalidActionWidget().bind("invalidActionReason", invalidActionReason)
     }
 
@@ -722,6 +722,20 @@ object TacticalMapComponent : DisplayComponent() {
         return global(AnimationData)?.animationContext?.nonEmpty() ?: false
     }
 
+    fun World.cycleTargetIfValid(delta : Int) : Boolean {
+        val selStyle = selection.selectionStyle
+        return if (selStyle is SelectionStyle.TargetSet && selStyle.possibleTargets.isNotEmpty()) {
+            val numTargets = selStyle.orderedPossibleTargets.size
+            val nextIndex = (selStyle.orderedPossibleTargets.indexOf(selection.previewTarget) + delta + numTargets * 2) % numTargets
+            selection.previewTarget = selStyle.orderedPossibleTargets.getOrNull(nextIndex)
+            forceRedraw = true
+            updatePreviewWidget()
+            true
+        } else {
+            false
+        }
+    }
+
 
     override fun handleEvent(world: World, event: Event) {
         with(world) {
@@ -780,10 +794,14 @@ object TacticalMapComponent : DisplayComponent() {
                         }
                         Key.Enter -> choosePreviewedTarget()
                         Key.Tab -> {
-                            val playerCharacters = entitiesWithData(CharacterData).asSequence().filter { it[CharacterData]!!.faction == t("Factions.Player") }.toList()
-                            if (playerCharacters.isNotEmpty()) {
-                                val index = playerCharacters.indexOf(selectedCharacter)
-                                selectCharacter(playerCharacters[(index + 1) % playerCharacters.size])
+                            if (cycleTargetIfValid(1)) {
+                                // done
+                            } else {
+                                val playerCharacters = entitiesWithData(CharacterData).asSequence().filter { it[CharacterData]!!.faction == t("Factions.Player") }.toList()
+                                if (playerCharacters.isNotEmpty()) {
+                                    val index = playerCharacters.indexOf(selectedCharacter)
+                                    selectCharacter(playerCharacters[(index + 1) % playerCharacters.size])
+                                }
                             }
                         }
                         else -> {
@@ -791,14 +809,7 @@ object TacticalMapComponent : DisplayComponent() {
 
                             if (event.key == Key.Left || event.key == Key.Right) {
                                 val delta = if (event.key == Key.Left) { -1 } else { 1 }
-                                val selStyle = selection.selectionStyle
-                                if (selStyle is SelectionStyle.TargetSet && selStyle.possibleTargets.isNotEmpty()) {
-                                    val numTargets = selStyle.orderedPossibleTargets.size
-                                    val nextIndex = (selStyle.orderedPossibleTargets.indexOf(selection.previewTarget) + delta + numTargets * 2) % numTargets
-                                    selection.previewTarget = selStyle.orderedPossibleTargets.getOrNull(nextIndex)
-                                    forceRedraw = true
-                                    updatePreviewWidget()
-                                }
+                                cycleTargetIfValid(delta)
                             }
                         }
                     }

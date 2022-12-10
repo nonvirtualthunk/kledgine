@@ -3,7 +3,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.jvm.tasks.Jar
 
 plugins {
-	kotlin("jvm") version "1.7.20-Beta"
+	kotlin("jvm") version "1.7.21"
+	kotlin("plugin.serialization") version "1.7.21"
 }
 
 val lwjglVersion = "3.3.1"
@@ -52,6 +53,7 @@ dependencies {
 	implementation("org.lwjgl", "lwjgl-zstd")
 	implementation("dev.romainguy:kotlin-math:1.5.0")
 	implementation("it.unimi.dsi:fastutil-core:8.5.8")
+	implementation("org.jetbrains.kotlinx:kotlinx-serialization-hocon:1.4.1")
 	runtimeOnly("org.lwjgl", "lwjgl", classifier = lwjglNatives)
 	runtimeOnly("org.lwjgl", "lwjgl-glfw", classifier = lwjglNatives)
 	runtimeOnly("org.lwjgl", "lwjgl-jemalloc", classifier = lwjglNatives)

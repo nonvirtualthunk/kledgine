@@ -29,7 +29,7 @@ operator fun FocusSettings?.unaryPlus() : FocusSettings {
 }
 
 
-data class FocusChangedEvent(override val widgets: MutableList<Widget>, val hasFocus: Boolean, val src : DisplayEvent) : WidgetEvent(src)
+data class FocusChangedEvent(val hasFocus: Boolean, val src : DisplayEvent) : WidgetEvent(src)
 
 object FocusWindowingComponent : WindowingComponent {
 
@@ -54,10 +54,10 @@ object FocusWindowingComponent : WindowingComponent {
                     if (w.windowingSystem.focusedWidget != w) {
                         Noto.info("Focus given to $w")
                         w.windowingSystem.focusedWidget?.let { fw ->
-                            w.windowingSystem.fireEvent(FocusChangedEvent(mutableListOf(fw), false, event))
+                            w.windowingSystem.fireEvent(FocusChangedEvent(false, event).withWidget(fw))
                         }
                         w.windowingSystem.focusedWidget = w
-                        w.windowingSystem.fireEvent(FocusChangedEvent(mutableListOf(w), true, event))
+                        w.windowingSystem.fireEvent(FocusChangedEvent(true, event).withWidget(w))
                     }
                 }
             }

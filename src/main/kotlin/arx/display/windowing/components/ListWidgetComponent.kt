@@ -73,9 +73,9 @@ data class ListWidgetItem (var data : Any? = null, val index : Int = 0) : Displa
     override fun dataType() : DataType<*> { return ListWidgetItem }
 }
 
-data class ListItemSelected(override val widgets: MutableList<Widget>, val index: Int, val data : Any?, val from : WidgetMouseReleaseEvent) : WidgetEvent(from)
+data class ListItemSelected(val index: Int, val data : Any?, val from : WidgetMouseReleaseEvent) : WidgetEvent(from)
 
-data class ListItemMousedOver(override val widgets: MutableList<Widget>, val index: Int, val dat : Any?, val from : WidgetMouseEnterEvent) : WidgetEvent(from)
+data class ListItemMousedOver(val index: Int, val dat : Any?, val from : WidgetMouseEnterEvent) : WidgetEvent(from)
 
 object ListWidgetComponent : WindowingComponent {
 
@@ -97,12 +97,12 @@ object ListWidgetComponent : WindowingComponent {
                     if (lw.selectable) {
                         newItem.onEvent<WidgetMouseReleaseEvent> { mre ->
                             lw.selectedIndex = i
-                            ws.fireEvent(ListItemSelected(mutableListOf(newItem), i, newItem[ListWidgetItem]?.data, mre))
+                            ws.fireEvent(ListItemSelected(i, newItem[ListWidgetItem]?.data, mre).withWidget(newItem))
                             true
                         }
                     }
                     newItem.onEventDo<WidgetMouseEnterEvent> { mee ->
-                        ws.fireEvent(ListItemMousedOver(mutableListOf(newItem), i, newItem[ListWidgetItem]?.data, mee))
+                        ws.fireEvent(ListItemMousedOver(i, newItem[ListWidgetItem]?.data, mee).withWidget(newItem))
                     }
 
                     lw.listItemChildren.add(newItem)

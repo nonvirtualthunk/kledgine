@@ -5,10 +5,14 @@ import arx.display.core.ImageRef
 import arx.display.core.SentinelImageRef
 import com.typesafe.config.ConfigValue
 import kotlin.reflect.KMutableProperty
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.*
+import kotlin.reflect.jvm.internal.impl.load.java.structure.JavaClass
+import kotlin.reflect.jvm.jvmErasure
+import kotlin.reflect.typeOf
 
 
-val stringBindingPattern = Regex("%\\(\\??\\s*([a-zA-Z\\d.]*\\s*)\\)")
+val stringBindingPattern = Regex("%\\([?!]?[?!]?\\s*([a-zA-Z\\d.]*\\s*)\\)")
 
 class BindingContext(val mappings: Map<String, Any>, val parent: BindingContext?) {
 
@@ -77,6 +81,19 @@ interface Bindable<out T> {
     fun copyBindable() : Bindable<T>
 }
 
+
+fun <T : Any> bindableAny(cv : ConfigValue?, defaultValue : T) : Bindable<T> {
+    return if (cv.isStr()) {
+        val str = cv.asStr() ?: ""
+        stringBindingPattern.match(str).ifLet { (pattern) ->
+            AnyPatternBindable(pattern, defaultValue) as Bindable<T>
+        }.orElse {
+            ValueBindable(defaultValue)
+        }
+    } else {
+        ValueBindable(defaultValue)
+    }
+}
 
 fun bindableInt(cv : ConfigValue?) : Bindable<Int> {
     return if (cv.isNum()) {
@@ -211,7 +228,7 @@ fun bindableBool(cv : ConfigValue?) : Bindable<Boolean> {
     } else if (cv.isStr()) {
         val str = cv.asStr() ?: ""
         stringBindingPattern.match(str).ifLet { (pattern) ->
-            BooleanPatternBindable(pattern, str.contains('?'), false) as Bindable<Boolean>
+            BooleanPatternBindable(pattern, str.contains('?'), str.contains('!'), false) as Bindable<Boolean>
         }.orElse {
             if (str.toBoolean()) {
                 ValueBindable.True
@@ -350,7 +367,7 @@ data class FunctionBindable<T>(val fn : () -> T) : Bindable<T> {
 }
 
 
-abstract class SimplePatternBindable<T>(val pattern : String, var value : T) : Bindable<T> {
+abstract class BasePatternBindable<T>(val pattern : String, var value : T) : Bindable<T> {
     override fun invoke(): T {
         return value
     }
@@ -369,13 +386,47 @@ abstract class SimplePatternBindable<T>(val pattern : String, var value : T) : B
     }
 }
 
-class BooleanPatternBindable(pattern : String, val justCheckPresent : Boolean, value : Boolean = false) : SimplePatternBindable<Boolean>(pattern, value) {
+
+//inline fun <reified T> anyPatternBindable(pattern : String, value : T) : BasePatternBindable<T> {
+//    return AnyPatternBindable(pattern, value, typeOf<T>().jvmErasure.java)
+//}
+
+
+class AnyPatternBindable<T : Any>(pattern : String, value : T) : BasePatternBindable<T>(pattern, value) {
+    val clazz = value.javaClass
+    override fun copyBindable(): Bindable<T> {
+        return AnyPatternBindable(pattern, value)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun transform(a: Any?): T? {
+        if (a == null) {
+            return null
+        }
+        return if (clazz.isAssignableFrom(a.javaClass)) {
+            a as? T?
+        } else {
+            null
+        }
+    }
+}
+
+class BooleanPatternBindable(pattern : String, val justCheckPresent : Boolean, val invert : Boolean, value : Boolean = false) : BasePatternBindable<Boolean>(pattern, value) {
     override fun transform(a: Any?): Boolean? {
         return when (a) {
-            is Boolean -> a
+            is Boolean ->
+                if (!invert) {
+                    a
+                } else {
+                    ! a
+                }
             else -> {
                 if (justCheckPresent) {
-                    a != null
+                    if (! invert) {
+                        a != null
+                    }  else {
+                        a == null
+                    }
                 } else {
                     null
                 }
@@ -384,11 +435,11 @@ class BooleanPatternBindable(pattern : String, val justCheckPresent : Boolean, v
     }
 
     override fun copyBindable(): Bindable<Boolean> {
-        return BooleanPatternBindable(pattern, justCheckPresent, value)
+        return BooleanPatternBindable(pattern, justCheckPresent, invert, value)
     }
 }
 
-class IntPatternBindable(pattern : String, value : Int = 0) : SimplePatternBindable<Int>(pattern, value) {
+class IntPatternBindable(pattern : String, value : Int = 0) : BasePatternBindable<Int>(pattern, value) {
     override fun transform(a: Any?): Int? {
         return (a as? Number)?.toInt()
     }
@@ -398,7 +449,7 @@ class IntPatternBindable(pattern : String, value : Int = 0) : SimplePatternBinda
     }
 }
 
-class ImageRefPattern(pattern : String, value : ImageRef = SentinelImageRef) : SimplePatternBindable<ImageRef>(pattern, value) {
+class ImageRefPattern(pattern : String, value : ImageRef = SentinelImageRef) : BasePatternBindable<ImageRef>(pattern, value) {
     override fun transform(a: Any?): ImageRef? {
         return a as? ImageRef
     }
@@ -408,7 +459,7 @@ class ImageRefPattern(pattern : String, value : ImageRef = SentinelImageRef) : S
     }
 }
 
-class ImagePattern(pattern : String, value : Image = SentinelImageRef.toImage()) : SimplePatternBindable<Image>(pattern, value) {
+class ImagePattern(pattern : String, value : Image = SentinelImageRef.toImage()) : BasePatternBindable<Image>(pattern, value) {
     override fun transform(a: Any?): Image? {
         return (a as? ImageRef)?.toImage() ?: (a as? Image)
     }
@@ -419,7 +470,7 @@ class ImagePattern(pattern : String, value : Image = SentinelImageRef.toImage())
 }
 
 
-class RGBAPatternBindable(pattern : String, value : RGBA = White) : SimplePatternBindable<RGBA>(pattern, value) {
+class RGBAPatternBindable(pattern : String, value : RGBA = White) : BasePatternBindable<RGBA>(pattern, value) {
     override fun transform(a: Any?): RGBA? {
         return a as? RGBA
     }
@@ -429,7 +480,7 @@ class RGBAPatternBindable(pattern : String, value : RGBA = White) : SimplePatter
     }
 }
 
-class RGBAOptPatternBindable(pattern : String, value : RGBA? = null) : SimplePatternBindable<RGBA?>(pattern, value) {
+class RGBAOptPatternBindable(pattern : String, value : RGBA? = null) : BasePatternBindable<RGBA?>(pattern, value) {
     override fun transform(a: Any?): RGBA? {
         return a as? RGBA
     }
@@ -440,7 +491,7 @@ class RGBAOptPatternBindable(pattern : String, value : RGBA? = null) : SimplePat
 }
 
 
-class FloatPatternBindable(pattern : String, value : Float = 0.0f) : SimplePatternBindable<Float>(pattern, value) {
+class FloatPatternBindable(pattern : String, value : Float = 0.0f) : BasePatternBindable<Float>(pattern, value) {
     override fun transform(a: Any?): Float? {
         return (a as? Number)?.toFloat()
     }
@@ -536,6 +587,43 @@ class RichTextPatternBindable(val rawPattern : String) : Bindable<RichText> {
     }
 }
 
+
+
+class PropertyBinding(val pattern : String, val twoWayBinding : Boolean, var lastBoundValue : Any? = null) {
+    val mainPatternSection = pattern.substringBeforeLast('.')
+    val finalSection = pattern.substringAfterLast('.')
+    init {
+        if (twoWayBinding && ! pattern.contains('.')) {
+            Noto.warn("Two way bindings currently require a A.B style binding with a parent and field part")
+        }
+    }
+    fun update(ctx : BindingContext, receiveFn : (Any) -> Unit, newSetterFn : (KMutableProperty.Setter<*>, KParameter, Any) -> Unit) {
+        ctx.resolve(pattern)?.let { bound ->
+            receiveFn(bound)
+        }
+
+        if (twoWayBinding) {
+            val bound = ctx.resolve(mainPatternSection)
+            if (bound !== lastBoundValue) {
+                lastBoundValue = bound
+                if (bound != null) {
+                    val mutProp = bound::class.declaredMemberProperties.find { it.name == finalSection } as? KMutableProperty<*>
+                    if (mutProp != null) {
+                        val setter = mutProp.setter
+                        val instanceParam = setter.instanceParameter
+                        if (instanceParam != null) {
+                            newSetterFn(setter, instanceParam, bound)
+                        } else {
+                            Noto.warn("two way binding encountered a null instance param?")
+                        }
+                    } else {
+                        Noto.warn("two way binding could not find appropriate property: $finalSection on base binding of $mainPatternSection")
+                    }
+                }
+            }
+        }
+    }
+}
 
 //inline fun <reified T> patternBindable(pattern : String) : Bindable<T> {
 //    return object : Bindable<T> {

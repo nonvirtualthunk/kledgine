@@ -21,20 +21,26 @@ import java.util.*
 
 
 abstract class WidgetEvent(srcEvent: DisplayEvent) : DisplayEvent(srcEvent) {
-    abstract val widgets: MutableList<Widget>
+    val widgets: MutableList<Widget> = mutableListOf()
 
     val widget : Widget get() { return widgets.last() }
+    val originWidget : Widget get() { return widgets.first() }
+
+    fun withWidget(w : Widget) : WidgetEvent {
+        widgets.add(w)
+        return this
+    }
 }
 
-data class WidgetKeyReleaseEvent(override val widgets: MutableList<Widget>, val key: Key, val mods: KeyModifiers, val from: KeyReleaseEvent) : WidgetEvent(from)
-data class WidgetKeyPressEvent(override val widgets: MutableList<Widget>, val key: Key, val mods: KeyModifiers, val from: KeyPressEvent) : WidgetEvent(from)
-data class WidgetKeyRepeatEvent(override val widgets: MutableList<Widget>, val key: Key, val mods: KeyModifiers, val from: KeyRepeatEvent) : WidgetEvent(from)
-data class WidgetMousePressEvent(override val widgets: MutableList<Widget>, val position: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MousePressEvent) : WidgetEvent(from)
-data class WidgetMouseReleaseEvent(override val widgets: MutableList<Widget>, val position: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MouseReleaseEvent) : WidgetEvent(from)
-data class WidgetMouseEnterEvent(override val widgets: MutableList<Widget>, val from: MouseMoveEvent) : WidgetEvent(from)
-data class WidgetMouseExitEvent(override val widgets: MutableList<Widget>, val from: MouseMoveEvent) : WidgetEvent(from)
-data class WidgetMouseMoveEvent(override val widgets: MutableList<Widget>, val position: Vec2f, val delta: Vec2f, val mods: KeyModifiers, val from: MouseMoveEvent) : WidgetEvent(from)
-data class WidgetMouseDragEvent(override val widgets: MutableList<Widget>, val position: Vec2f, val delta: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MouseDragEvent) : WidgetEvent(from)
+data class WidgetKeyReleaseEvent(val key: Key, val mods: KeyModifiers, val from: KeyReleaseEvent) : WidgetEvent(from)
+data class WidgetKeyPressEvent(val key: Key, val mods: KeyModifiers, val from: KeyPressEvent) : WidgetEvent(from)
+data class WidgetKeyRepeatEvent(val key: Key, val mods: KeyModifiers, val from: KeyRepeatEvent) : WidgetEvent(from)
+data class WidgetMousePressEvent(val position: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MousePressEvent) : WidgetEvent(from)
+data class WidgetMouseReleaseEvent(val position: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MouseReleaseEvent) : WidgetEvent(from)
+data class WidgetMouseEnterEvent(val from: MouseMoveEvent) : WidgetEvent(from)
+data class WidgetMouseExitEvent(val from: MouseMoveEvent) : WidgetEvent(from)
+data class WidgetMouseMoveEvent(val position: Vec2f, val delta: Vec2f, val mods: KeyModifiers, val from: MouseMoveEvent) : WidgetEvent(from)
+data class WidgetMouseDragEvent(val position: Vec2f, val delta: Vec2f, val button: MouseButton, val mods: KeyModifiers, val from: MouseDragEvent) : WidgetEvent(from)
 
 
 interface WindowingComponent {
@@ -79,6 +85,8 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
     val configLoadableDataTypes = mutableListOf<DataType<EntityData>>()
     val archetypes = mutableMapOf<String, WidgetArchetype>()
 
+    val ignoreBoundsWidgets = mutableSetOf<Widget>()
+
     var pendingUpdates = mutableMapOf<Widget, EnumSet<RecalculationFlag>>(desktop to EnumSet.allOf(RecalculationFlag::class.java))
 
     private var components = mutableListOf<WindowingComponent>()
@@ -105,6 +113,8 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
         registerComponent(TextWindowingComponent)
         registerComponent(ImageDisplayWindowingComponent)
         registerComponent(FocusWindowingComponent)
+        registerComponent(FileInputWindowingComponent)
+        registerComponent(DropdownWindowingComponent)
     }
 
     fun createWidget(): Widget {
@@ -120,6 +130,7 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
     }
 
     fun destroyWidget(w: Widget) {
+        w.destroyed = true
         widgets.remove(w.entity.id)
         if (focusedWidget == w) {
             focusedWidget = null
@@ -130,16 +141,38 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
             markForFullUpdate()
         }
         world.destroyEntity(w.entity)
+
+        if (focusedWidget == w) {
+            focusedWidget = null
+        }
+        if (lastWidgetUnderMouse == w) {
+            lastWidgetUnderMouse = desktop
+        }
+
+        for (c in w.children) {
+            destroyWidget(c)
+        }
     }
 
     fun loadArchetype(cv: ConfigValue) : WidgetArchetype {
-        val stylesheet = Resources.config("display/widgets/Stylesheet.sml")
+        val stylesheets = listOf(
+            Resources.config("/arx/display/widgets/Stylesheet.sml"),
+            Resources.config("display/widgets/Stylesheet.sml")
+        )
 
         val data = configLoadableDataTypes.mapNotNull { dt ->
             (dt as FromConfigCreator<*>).createFromConfig(cv) as EntityData?
         }
         val widgetHolder = Widget(this, null)
-        widgetHolder.readFromConfig(stylesheet.root())
+        for (stylesheet in stylesheets) {
+            widgetHolder.readFromConfig(stylesheet.root())
+            cv["type"].asStr()?.let { typeStr ->
+                widgetHolder.readFromConfig(stylesheet[typeStr])
+                if (typeStr.isNotEmpty() && typeStr.first().isLowerCase()) {
+                    widgetHolder.readFromConfig(stylesheet[typeStr.replaceFirstChar { it.uppercase() }])
+                }
+            }
+        }
         widgetHolder.readFromConfig(cv)
 
         val children = cv["children"].map { k, v -> k to loadArchetype(v) }
@@ -193,7 +226,7 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
 
     fun updateDrawData(w: Widget, bounds: Recti, needsRerender: Set<Widget>) {
         if (w.showing()) {
-            w.bounds = bounds
+            w.bounds = if (w.ignoreBounds) { desktop.bounds } else { bounds }
             if (needsRerender.contains(w)) {
                 w.quads.clear()
                 for (comp in components) {
@@ -203,7 +236,7 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
 
             val cx = w.clientOffset(Axis.X)
             val cy = w.clientOffset(Axis.Y)
-            val newBounds = bounds.intersect(Recti(w.resX + cx, w.resY + cy, w.resWidth - cx * 2, w.resHeight - cy * 2))
+            val newBounds = w.bounds.intersect(Recti(w.resX + cx, w.resY + cy, w.resWidth - cx * 2, w.resHeight - cy * 2))
             w.sortChildren()
             for (c in w.children) {
                 updateDrawData(c, newBounds, needsRerender)
@@ -520,13 +553,12 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
                             maximums.y = w.resolvedDimensions[Axis.Y]
                         }
 
-                        var result = 10
+                        var result = 0
                         axis.to2D()?.let { ax2d ->
                             for (component in components) {
                                 val isize = component.intrinsicSize(w, ax2d, minimums, maximums)
                                 if (isize != null) {
-                                    result = isize + w.clientOffset(axis) * 2
-                                    break
+                                    result = max(result, isize + w.clientOffset(axis) * 2)
                                 }
                             }
                         }
@@ -616,7 +648,17 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
     }
 
     fun widgetUnderMouse(position: Vec2f) : Widget {
-        var w = desktop
+        // look at all the widgets that float, i.e. ignore bounds
+        for (w in ignoreBoundsWidgets) {
+            if (widgetContainsPosition(w, position)) {
+                return widgetUnderMouse(w, position)
+            }
+        }
+        return widgetUnderMouse(desktop, position)
+    }
+
+    internal fun widgetUnderMouse(startingFrom: Widget, position: Vec2f) : Widget {
+        var w = startingFrom
         while(true) {
             var newW : Widget? = null
             for (c in w.children) {
@@ -674,13 +716,13 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
 
     private fun mapEvent(event: DisplayEvent) : WidgetEvent? {
         return when (event) {
-            is KeyReleaseEvent -> WidgetKeyReleaseEvent(mutableListOf(), event.key, event.mods, event)
-            is KeyPressEvent -> WidgetKeyPressEvent(mutableListOf(), event.key, event.mods, event)
-            is KeyRepeatEvent -> WidgetKeyRepeatEvent(mutableListOf(), event.key, event.mods, event)
-            is MousePressEvent -> WidgetMousePressEvent(mutableListOf(), screenToW(event.position), event.button, event.mods, event)
-            is MouseReleaseEvent -> WidgetMouseReleaseEvent(mutableListOf(), screenToW(event.position), event.button, event.mods, event)
-            is MouseMoveEvent -> WidgetMouseMoveEvent(mutableListOf(), screenToW(event.position), event.delta, event.mods, event)
-            is MouseDragEvent -> WidgetMouseDragEvent(mutableListOf(), screenToW(event.position), event.delta, event.button, event.mods, event)
+            is KeyReleaseEvent -> WidgetKeyReleaseEvent(event.key, event.mods, event)
+            is KeyPressEvent -> WidgetKeyPressEvent(event.key, event.mods, event)
+            is KeyRepeatEvent -> WidgetKeyRepeatEvent(event.key, event.mods, event)
+            is MousePressEvent -> WidgetMousePressEvent(screenToW(event.position), event.button, event.mods, event)
+            is MouseReleaseEvent -> WidgetMouseReleaseEvent(screenToW(event.position), event.button, event.mods, event)
+            is MouseMoveEvent -> WidgetMouseMoveEvent(screenToW(event.position), event.delta, event.mods, event)
+            is MouseDragEvent -> WidgetMouseDragEvent(screenToW(event.position), event.delta, event.button, event.mods, event)
             is WidgetEvent -> event
             else -> null
         }
@@ -698,8 +740,8 @@ class WindowingSystem : DisplayData, CreateOnAccessData {
             is MouseMoveEvent -> {
                 val w = widgetUnderMouse(screenToW(event.position))
                 if (lastWidgetUnderMouse != w) {
-                    handleEvent(lastWidgetUnderMouse, WidgetMouseExitEvent(mutableListOf(lastWidgetUnderMouse), event))
-                    handleEvent(w, WidgetMouseEnterEvent(mutableListOf(w), event))
+                    handleEvent(lastWidgetUnderMouse, WidgetMouseExitEvent(event).withWidget(lastWidgetUnderMouse))
+                    handleEvent(w, WidgetMouseEnterEvent(event).withWidget(w))
                     lastWidgetUnderMouse = w
                 }
             }

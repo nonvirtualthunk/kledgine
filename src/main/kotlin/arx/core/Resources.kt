@@ -23,7 +23,11 @@ object Resources {
 
 
     private fun pickPath(str: String): String {
-        return if (Files.exists(Path.of(assetPath + str))) {
+        return if (str.startsWith("/") && Files.exists(Path.of(str))) {
+            str
+        } else if (str.startsWith("/") && Files.exists(Path.of(str.substring(1)))) {
+            str.substring(1)
+        } else if (Files.exists(Path.of(assetPath + str))) {
             assetPath + str
         } else if (Files.exists(Path.of(baseAssetPath + str))) {
             baseAssetPath + str
@@ -44,7 +48,10 @@ object Resources {
     }
 
     fun config(str: String): Config {
-        return configs.getOrPut(str) { ConfigFactory.parseFile(File(pickPath(str))).resolve() }
+        return configs.getOrPut(str) {
+            val f = File(pickPath(str))
+            ConfigFactory.parseFile(f).resolve()
+        }
     }
 
     fun inputStream(path: String): InputStream = FileInputStream(pickPath(path))

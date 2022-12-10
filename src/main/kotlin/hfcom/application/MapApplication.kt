@@ -48,6 +48,8 @@ object MapGeneratorComponent : GameComponent() {
                         listOf(createCharacter(t("CharacterClasses.Cultist"), t("Factions.Enemy"), "Cultist"))
                     } else if (x == 5 && y == 5) {
                         listOf(createObject(ObjectTypes[t("Objects.Wall")]!!))
+                    } else if (x == 7 && y == 2) {
+                        listOf(createObject(ObjectTypes[t("Objects.OakTree")]!!))
                     } else {
                         emptyList()
                     }

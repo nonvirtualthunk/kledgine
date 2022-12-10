@@ -49,18 +49,23 @@ fun GameWorld.createObject(objType : ObjectType) : Entity {
     return c
 }
 
-fun GameWorld.placeEntity(ent: Entity, at: MapCoord2D) {
-    val tm = global(TacticalMap) ?: return
+fun GameWorld.placeEntity(ent: Entity, at: MapCoord2D) : Boolean {
+    val tm = global(TacticalMap) ?: return false
     tm.entities.add(ent)
 
-    val pd = ent[Physical] ?: return
+    val pd = ent[Physical] ?: return false
 
     val tile = tm.tiles[at]
-    val z = tile.occupiableZLevels(pd.size).next()
+    val occupiable = tile.occupiableZLevels(pd.size)
+    if (! occupiable.hasNext()) {
+        return false
+    }
+    val z = occupiable.next()
     pd.position = MapCoord(at, z)
     tile.addEntity(this, ent)
 
     fireEvent(EntityPlaced(ent, pd.position))
+    return true
 }
 
 fun GameWorld.moveCost(map: TacticalMap, cd: CharacterData, from: MapCoord, to: MapCoord): Double {
